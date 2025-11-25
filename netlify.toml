@@ -3,7 +3,9 @@
   publish = "dist"
 
 [build.environment]
-  NODE_VERSION = "18"
+  NODE_VERSION = "20"
+  VITE_SUPABASE_URL = "YOUR_SUPABASE_URL_PLACEHOLDER" # O Netlify usará os valores reais configurados no painel
+  VITE_SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY_PLACEHOLDER"
 
 [[redirects]]
   from = "/*"
