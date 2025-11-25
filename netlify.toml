@@ -4,8 +4,8 @@
 
 [build.environment]
   NODE_VERSION = "20"
-  VITE_SUPABASE_URL = "YOUR_SUPABASE_URL_PLACEHOLDER" # O Netlify usará os valores reais configurados no painel
-  VITE_SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY_PLACEHOLDER"
+  # Aumenta a memória disponível para o build (evita crash por falta de memória)
+  NODE_OPTIONS = "--max_old_space_size=4096"
 
 [[redirects]]
   from = "/*"
