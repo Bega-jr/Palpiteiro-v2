@@ -1,31 +1,30 @@
-# Dependencies
-node_modules/
-dist/
-dist-ssr/
-
-# Environment variables (IMPORTANTE!)
-.env
-.env.local
-.env.*.local
-.env.example        # opcional: alguns deixam no git, mas se quiser 100% seguro pode ignorar também
-
-# Build e logs
+# Logs
+logs
 *.log
 npm-debug.log*
 yarn-debug.log*
+yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Editor e OS
+# Dependencies
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
 .DS_Store
-.vscode/
-.idea/
 *.suo
-*.ntvs*
+*.ntvs
 *.njsproj
 *.sln
-*.swp
-*.swo
+*.sw?
 
-# Vite cache
-.vite/
+# Environment variables
+.env
+.env.test
+.env.production
