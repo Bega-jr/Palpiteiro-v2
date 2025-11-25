@@ -1,9 +1,9 @@
 [build]
-  command = "npm install && npm run build"
+  command = "npm run build"
   publish = "dist"
 
-[build.environment]
-  NODE_VERSION = "20.18.0"   # ← Supabase 2.84 exige Node 20+
+[dev]
+  command = "npm run dev"
 
 [[redirects]]
   from = "/*"
