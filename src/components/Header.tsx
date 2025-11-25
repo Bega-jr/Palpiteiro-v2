@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext'; // ← Integra com AuthContext
-import { LogOut, UserCircle2 } from 'lucide-react'; // UserCircle2 existe e é bonito
+import { LogOut } from 'lucide-react'  // só isso
 
 export function Header() {
   const { user, signOut } = useAuth(); // ← Puxa user do context

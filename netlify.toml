@@ -3,7 +3,7 @@
   publish = "dist"
 
 [build.environment]
-  NODE_VERSION = "18.20.4"   # ← versão exata que nunca falha com Vite 5
+  NODE_VERSION = "20.18.0"   # ← Supabase 2.84 exige Node 20+
 
 [[redirects]]
   from = "/*"
