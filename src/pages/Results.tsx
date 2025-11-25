@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Search, Calendar, MapPin, Monitor, Trophy } from 'lucide-react';
 import { MOCK_LATEST_RESULT } from '../utils/mockResults';
 import { LotteryBall } from '../components/LotteryBall';

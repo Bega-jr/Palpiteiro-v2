@@ -1,5 +1,3 @@
-import React from 'react';
-import { LucideIcon } from 'lucide-react'; // ← Se quiser icons, mas opcional
 
 export function Footer() {
   return (

@@ -1,4 +1,3 @@
-import React from 'react';
 import { ArrowDown, Target } from 'lucide-react';
 import { motion } from 'framer-motion';
 

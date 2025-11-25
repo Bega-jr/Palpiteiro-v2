@@ -1,4 +1,3 @@
-import React from 'react';
 import { Zap, Shield, Smartphone, Globe } from 'lucide-react';
 
 const features = [

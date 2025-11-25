@@ -1,4 +1,3 @@
-import React from 'react';
 import { Hero } from '../components/Hero';
 import { DailyTip } from '../components/DailyTip';
 import { Generator } from '../components/Generator';

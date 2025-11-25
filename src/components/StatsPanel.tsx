@@ -1,4 +1,3 @@
-import React from 'react';
 import { TrendingUp, TrendingDown, Activity } from 'lucide-react';
 import { calculateStats } from '../utils/lotteryLogic';
 

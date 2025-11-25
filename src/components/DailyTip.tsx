@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react'
 import { Calendar, Star, Share2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { generateDailyGame, GeneratedGame } from '../utils/lotteryLogic';

@@ -1,90 +1,98 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { supabase } from '../lib/supabase';
-import { Session, User } from '@supabase/supabase-js';
-import { toast } from 'sonner'; // ← Integra com toaster
+import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import { supabase } from '../lib/supabase'
+import { Session, User } from '@supabase/supabase-js'
+import { toast } from 'sonner'
 
 interface AuthContextType {
-  user: User | null;
-  session: Session | null;
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string) => Promise<void>;
-  signOut: () => Promise<void>;
-  loading: boolean;
+  user: User | null
+  session: Session | null
+  isVip: boolean
+  signIn: (email: string, password: string) => Promise<void>
+  signUp: (email: string, password: string) => Promise<void>
+  signInWithGoogle: () => Promise<void>
+  signOut: () => Promise<void>
+  loading: boolean
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null)
+  const [session, setSession] = useState<Session | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Pega sessão atual
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+      setSession(session)
+      setUser(session?.user ?? null)
+      setLoading(false)
+    })
 
-    // Escuta mudanças de auth
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-      }
-    );
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+      setUser(session?.user ?? null)
+      setLoading(false)
+    })
 
-    return () => subscription.unsubscribe();
-  }, []);
+    return () => subscription.unsubscribe()
+  }, [])
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) {
-      toast.error(`Erro no login: ${error.message}`);
-      throw error;
+      toast.error('Erro no login: ' + error.message)
+      throw error
     }
-    toast.success('Login realizado com sucesso!');
-  };
+    toast.success('Login realizado!')
+  }
 
   const signUp = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({ email, password });
+    const { error } = await supabase.auth.signUp({ email, password })
     if (error) {
-      toast.error(`Erro no cadastro: ${error.message}`);
-      throw error;
+      toast.error('Erro no cadastro: ' + error.message)
+      throw error
     }
-    toast.success('Cadastro realizado! Confirme seu email.');
-  };
+    toast.success('Cadastro realizado! Confira seu e-mail.')
+  }
+
+  const signInWithGoogle = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin }
+    })
+    if (error) {
+      toast.error('Erro com Google: ' + error.message)
+      throw error
+    }
+  }
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut()
     if (error) {
-      toast.error(`Erro ao sair: ${error.message}`);
-      throw error;
+      toast.error('Erro ao sair: ' + error.message)
+    } else {
+      toast.success('Deslogado com sucesso!')
     }
-    toast.success('Até logo!');
-  };
+  }
+
+  const isVip = user?.user_metadata?.is_vip === true || user?.app_metadata?.is_vip === true
 
   const value = {
     user,
     session,
+    isVip,
     signIn,
     signUp,
+    signInWithGoogle,
     signOut,
     loading,
-  };
-
-  if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Carregando...</div>;
   }
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
 export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth deve ser usado dentro de AuthProvider');
-  }
-  return context;
-};
+  const context = useContext(AuthContext)
+  if (!context) throw new Error('useAuth deve estar dentro de AuthProvider')
+  return context
+}

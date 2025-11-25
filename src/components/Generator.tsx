@@ -1,4 +1,3 @@
-import React, { useState } from 'react';
 import { Wand2, RefreshCw, Grid3X3, List, Lock, Save } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { generateSmartGames, GeneratedGame } from '../utils/lotteryLogic';
