@@ -1,201 +1,195 @@
-import { useState } from 'react'
-import { Wand2, RefreshCw, Grid3X3, List, Lock, Save } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { generateSmartGames, GeneratedGame } from '../utils/lotteryLogic';
-import { LotteryBall } from './LotteryBall';
-import { StatsPanel } from './StatsPanel';
-import { TicketView } from './TicketView';
-import { useAuth } from '../contexts/AuthContext';
-import { Link } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { useState, useEffect } from 'react'
+import { Wand2, RefreshCw, Grid3X3, List, Lock, Save, CheckCircle } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { LotteryBall } from './LotteryBall'
+import { StatsPanel } from './StatsPanel'
+import { TicketView } from './TicketView'
+import { useAuth } from '../contexts/AuthContext'
+import { Link } from 'react-router-dom'
+import { supabase } from '../lib/supabase'
+import { toast } from 'sonner'
+
+interface GeneratedGame {
+  id: number
+  numbers: number[]
+  type: 'hot' | 'cold' | 'balanced' | 'pattern_0'
+  stats: {
+    sum: number
+    even: number
+    odd: number
+  }
+}
 
 export function Generator() {
-  const { isVip, user } = useAuth();
-  const [games, setGames] = useState<GeneratedGame[]>([]);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [mode, setMode] = useState<'standard' | 'final_0'>('standard');
-  const [viewMode, setViewMode] = useState<'balls' | 'ticket'>('balls');
-  const [savedGames, setSavedGames] = useState<number[]>([]);
+  const { isVip, user } = useAuth()
+  const [games, setGames] = useState<GeneratedGame[]>([])
+  const [fixos, setFixos] = useState<number[]>([])
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [viewMode, setViewMode] = useState<'balls' | 'ticket'>('balls')
+  const [savedGames, setSavedGames] = useState<number[]>([])
 
-  const handleGenerate = () => {
-    setIsGenerating(true);
-    setGames([]);
-    
-    setTimeout(() => {
-      const newGames = generateSmartGames(mode, isVip);
-      setGames(newGames);
-      setIsGenerating(false);
-    }, 1500);
-  };
+  const BACKEND_URL = 'https://palpiteiro-v2-backend.onrender.com'
+
+  const handleGenerate = async () => {
+    setIsGenerating(true)
+    setGames([])
+
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/palpites`)
+      const data = await response.json()
+
+      if (data.apostas && data.fixos) {
+        setFixos(data.fixos)
+
+        const novosJogos: GeneratedGame[] = data.apostas.map((aposta: number[], index: number) => ({
+          id: index + 1,
+          numbers: aposta,
+          type: index < 5 ? 'hot' : 'balanced',
+          stats: {
+            sum: aposta.reduce((a, b) => a + b, 0),
+            even: aposta.filter(n => n % 2 === 0).length,
+            odd: aposta.filter(n => n % 2 !== 0).length
+          }
+        }))
+
+        setGames(novosJogos)
+      }
+    } catch (err) {
+      console.error('Erro ao carregar palpites:', err)
+      toast.error('Erro ao gerar palpites. Tente novamente.')
+    } finally {
+      setIsGenerating(false)
+    }
+  }
 
   const saveGame = async (game: GeneratedGame) => {
-    if (!user) return;
-    
+    if (!user) {
+      toast.error('Faça login para salvar jogos')
+      return
+    }
+
     try {
       const { error } = await supabase.from('saved_games').insert({
         user_id: user.id,
         numbers: game.numbers,
-        contest_type: mode,
+        contest_type: 'standard',
         stats: game.stats
-      });
+      })
 
       if (!error) {
-        setSavedGames(prev => [...prev, game.id]);
+        setSavedGames(prev => [...prev, game.id])
+        toast.success('Jogo salvo com sucesso!')
       }
     } catch (err) {
-      console.error('Erro ao salvar', err);
+      toast.error('Erro ao salvar jogo')
     }
-  };
+  }
+
+  // Gera automaticamente ao carregar a página
+  useEffect(() => {
+    handleGenerate()
+  }, [])
 
   return (
     <section className="py-12 bg-gray-50" id="generator">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        
         <div className="text-center mb-10">
           <h2 className="text-3xl font-bold text-gray-900 mb-4">Gerador de Desdobramentos</h2>
           <p className="text-gray-600 max-w-2xl mx-auto">
-            Gere 7 jogos estratégicos utilizando nossa engine estatística.
+            7 jogos estratégicos com base em dados reais da Lotofácil (atualizados automaticamente)
           </p>
         </div>
 
         <StatsPanel />
 
-        {!isVip && (
-          <div className="max-w-2xl mx-auto mb-8 bg-yellow-50 border border-yellow-200 p-4 rounded-lg flex items-start gap-3">
-            <Lock className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-            <div className="text-sm text-yellow-800">
-              <p className="font-bold">Modo Gratuito Ativo</p>
-              <p>Você está vendo os <strong>palpites fixos do dia</strong>. Para gerar novas combinações ilimitadas e salvar seus jogos, <Link to="/vip" className="underline font-bold hover:text-yellow-900">torne-se VIP</Link>.</p>
+        {/* Fixos do dia */}
+        {fixos.length > 0 && (
+          <div className="max-w-2xl mx-auto mb-8 text-center">
+            <p className="text-sm text-gray-600 mb-3">Números Fixos do Dia (mais sorteados recentemente)</p>
+            <div className="flex justify-center gap-3 flex-wrap">
+              {fixos.map(n => (
+                <div key={n} className="w-16 h-16 bg-primary-600 text-white rounded-full flex items-center justify-center text-2xl font-bold shadow-lg">
+                  {n.toString().padStart(2, '0')}
+                </div>
+              ))}
             </div>
           </div>
         )}
 
+        {/* Botões */}
         <div className="flex flex-col items-center justify-center gap-6 mb-12">
-          <div className="flex flex-wrap justify-center gap-4">
+          {games.length > 0 && (
             <div className="flex items-center bg-white p-1 rounded-lg border border-gray-200 shadow-sm">
-              <button
-                onClick={() => setMode('standard')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                  mode === 'standard' 
-                    ? 'bg-primary-600 text-white shadow-sm' 
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Concurso Padrão
+              <button onClick={() => setViewMode('balls')} className={`p-3 rounded-md ${viewMode === 'balls' ? 'bg-primary-100 text-primary-700' : 'text-gray-500'}`}>
+                <List className="w-5 h-5" />
               </button>
-              <button
-                onClick={() => setMode('final_0')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${
-                  mode === 'final_0' 
-                    ? 'bg-purple-600 text-white shadow-sm' 
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Final 0
+              <button onClick={() => setViewMode('ticket')} className={`p-3 rounded-md ${viewMode === 'ticket' ? 'bg-primary-100 text-primary-700' : 'text-gray-500'}`}>
+                <Grid3X3 className="w-5 h-5" />
               </button>
             </div>
-
-            {games.length > 0 && (
-              <div className="flex items-center bg-white p-1 rounded-lg border border-gray-200 shadow-sm">
-                <button
-                  onClick={() => setViewMode('balls')}
-                  className={`p-2 rounded-md transition-all ${viewMode === 'balls' ? 'bg-gray-100 text-gray-900' : 'text-gray-400'}`}
-                  title="Visualização em Bolas"
-                >
-                  <List className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => setViewMode('ticket')}
-                  className={`p-2 rounded-md transition-all ${viewMode === 'ticket' ? 'bg-gray-100 text-gray-900' : 'text-gray-400'}`}
-                  title="Visualização em Volante"
-                >
-                  <Grid3X3 className="w-5 h-5" />
-                </button>
-              </div>
-            )}
-          </div>
+          )}
 
           <button
             onClick={handleGenerate}
             disabled={isGenerating}
-            className={`
-              relative overflow-hidden px-8 py-4 rounded-xl font-bold text-lg shadow-lg transition-all transform hover:-translate-y-1 w-full sm:w-auto
-              ${isGenerating 
-                ? 'bg-gray-400 cursor-not-allowed' 
-                : mode === 'final_0' ? 'bg-purple-600 hover:bg-purple-700 text-white shadow-purple-500/30' : 'bg-primary-600 hover:bg-primary-700 text-white shadow-primary-500/30'
-              }
-            `}
+            className={`relative overflow-hidden px-10 py-5 rounded-xl font-bold text-lg shadow-xl transition-all transform hover:scale-105 ${
+              isGenerating ? 'bg-gray-400' : 'bg-gradient-to-r from-primary-600 to-purple-600 text-white'
+            }`}
           >
-            <span className="flex items-center justify-center gap-2">
+            <span className="flex items-center gap-3">
               {isGenerating ? (
                 <>
-                  <RefreshCw className="w-5 h-5 animate-spin" />
-                  Processando...
+                  <RefreshCw className="w-6 h-6 animate-spin" />
+                  Gerando com IA...
                 </>
               ) : (
                 <>
-                  <Wand2 className="w-5 h-5" />
-                  {games.length > 0 && !isVip ? "Recarregar Palpites Fixos" : "Gerar 7 Palpites"}
+                  <Wand2 className="w-6 h-6" />
+                  Gerar Novos Palpites
                 </>
               )}
             </span>
           </button>
         </div>
 
-        <div className={viewMode === 'ticket' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" : "grid grid-cols-1 gap-4"}>
+        {/* Jogos */}
+        <div className={viewMode === 'ticket' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" : "space-y-6"}>
           <AnimatePresence mode="wait">
             {games.map((game, index) => (
               <motion.div
                 key={game.id}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className={`bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all ${viewMode === 'ticket' ? 'flex flex-col items-center' : ''}`}
+                className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 hover:shadow-2xl transition-all"
               >
-                <div className={`flex ${viewMode === 'ticket' ? 'flex-col text-center' : 'flex-row justify-between'} items-center gap-4 mb-4 w-full`}>
-                  <div className="flex items-center gap-3">
-                    <span className="flex items-center justify-center w-8 h-8 bg-gray-900 text-white rounded-full font-bold text-sm">
-                      {game.id}
-                    </span>
-                    <div>
-                      <h3 className="font-semibold text-gray-900 text-sm">
-                        {game.type === 'hot' && 'Estratégia: Quentes'}
-                        {game.type === 'cold' && 'Estratégia: Zebras'}
-                        {game.type === 'balanced' && 'Estratégia: Equilíbrio'}
-                        {game.type === 'pattern_0' && 'Estratégia: Final 0'}
-                      </h3>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    {viewMode === 'balls' && (
-                      <div className="hidden md:flex gap-4 text-xs text-gray-500 bg-gray-50 px-3 py-1.5 rounded-lg mr-2">
-                        <span title="Soma">Soma: <strong>{game.stats.sum}</strong></span>
-                        <span title="Pares/Ímpares">P/I: <strong>{game.stats.even}/{game.stats.odd}</strong></span>
-                      </div>
-                    )}
-                    
-                    {isVip && (
-                      <button 
-                        onClick={() => saveGame(game)}
-                        disabled={savedGames.includes(game.id)}
-                        className={`p-2 rounded-full transition-colors ${savedGames.includes(game.id) ? 'bg-green-100 text-green-600' : 'hover:bg-gray-100 text-gray-400'}`}
-                        title="Salvar Jogo"
-                      >
-                        {savedGames.includes(game.id) ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-                      </button>
-                    )}
-                  </div>
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="font-bold text-lg">
+                    Aposta {index + 1} {index >= 5 && '(Modo Grok)'}
+                  </h3>
+                  {isVip && (
+                    <button
+                      onClick={() => saveGame(game)}
+                      disabled={savedGames.includes(game.id)}
+                      className={`p-2 rounded-full transition-all ${
+                        savedGames.includes(game.id)
+                          ? 'bg-green-100 text-green-600'
+                          : 'hover:bg-gray-100 text-gray-500'
+                      }`}
+                    >
+                      {savedGames.includes(game.id) ? <CheckCircle className="w-5 h-5" /> : <Save className="w-5 h-5" />}
+                    </button>
+                  )}
                 </div>
 
                 {viewMode === 'balls' ? (
-                  <div className="flex flex-wrap gap-2 justify-center md:justify-start">
-                    {game.numbers.map((num) => (
-                      <LotteryBall key={num} number={num} />
+                  <div className="flex flex-wrap gap-3 justify-center">
+                    {game.numbers.map(num => (
+                      <LotteryBall key={num} number={num} isFixed={fixos.includes(num)} />
                     ))}
                   </div>
                 ) : (
-                  <TicketView selectedNumbers={game.numbers} className="w-full max-w-[240px] border-gray-200" />
+                  <TicketView selectedNumbers={game.numbers} className="w-full" />
                 )}
               </motion.div>
             ))}
@@ -203,13 +197,5 @@ export function Generator() {
         </div>
       </div>
     </section>
-  );
-}
-
-function Check({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-    </svg>
-  );
+  )
 }
