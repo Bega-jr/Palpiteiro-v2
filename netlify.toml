@@ -12,3 +12,11 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
+[secrets_scanning]
+  # Ignora a verificação de segredos para as chaves do Supabase,
+  # pois a VITE_SUPABASE_ANON_KEY é uma chave pública de frontend.
+  omit_keys = [
+    "VITE_SUPABASE_ANON_KEY",
+    "VITE_SUPABASE_URL"
+  ]
