@@ -1,22 +1,11 @@
 [build]
-  # Comando "Nuclear": Limpa módulos antigos e travas de versão antes de instalar
   command = "rm -rf node_modules package-lock.json && npm install && npm run build"
   publish = "dist"
 
 [build.environment]
   NODE_VERSION = "20"
-  # Aumenta a memória do Node para evitar travamentos
-  NODE_OPTIONS = "--max_old_space_size=4096"
 
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
-
-[secrets_scanning]
-  # Ignora a verificação de segredos para as chaves do Supabase,
-  # pois a VITE_SUPABASE_ANON_KEY é uma chave pública de frontend.
-  omit_keys = [
-    "VITE_SUPABASE_ANON_KEY",
-    "VITE_SUPABASE_URL"
-  ]
