@@ -17,14 +17,15 @@ export function Results() {
   const [result, setResult] = useState<BackendResult | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  // URL DO SEU BACKEND NO VERCEL — NUNCA MAIS MUDE
+  const BACKEND_URL = 'https://palpiteiro-v2-backend.vercel.app';
+
+   useEffect(() => {
     const fetchResults = async () => {
       try {
         setLoading(true);
 
-        const response = await fetch(
-          'palpiteiro-v2-backend.vercel.app'
-        );
+        const response = await fetch(`${BACKEND_URL}/api/resultados`);
 
         if (!response.ok) {
           throw new Error(`Erro ${response.status}`);
@@ -34,35 +35,32 @@ export function Results() {
 
         if (data.erro) {
           toast.error(data.erro);
-          if (data.erro.includes('vazio') || data.erro.includes('Histórico')) {
-            toast.info('Clique no botão abaixo para baixar os dados oficiais da Caixa');
-          }
+          toast.info('Clique no botão abaixo para baixar os dados oficiais da Caixa');
           return;
         }
 
         setResult(data);
         toast.success(`Concurso ${data.ultimo_concurso} carregado com sucesso!`);
       } catch (err) {
-        console.error('Erro ao buscar resultados:', err);
+        console.error('Erro ao conectar:', err);
         toast.error('Não foi possível conectar ao servidor');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchResults();
+    fetchResults(); // Chama a função
   }, []);
 
-  // Abre a página de debug em nova aba
-  const openDebug = () => {
-    window.open('palpiteiro-v2-backend.vercel.app/api/debug', '_blank');
-  };
-
-  // Abre o reset em nova aba
   const openReset = () => {
-    window.open('palpiteiro-v2-backend.vercel.app/api/reset', '_blank');
+    window.open(`${BACKEND_URL}/api/reset`, '_blank');
   };
 
+  const openDebug = () => {
+    window.open(`${BACKEND_URL}/api/debug`, '_blank');
+  };
+
+  // TELA DE CARREGANDO
   if (loading) {
     return (
       <div className="pt-24 min-h-screen bg-gray-50 flex items-center justify-center">
@@ -71,58 +69,61 @@ export function Results() {
     );
   }
 
+  // TELA DE ERRO / HISTÓRICO VAZIO
   if (!result || result.erro) {
     return (
-      <div className="pt-24 min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-8 px-4">
-        <div className="text-center">
-          <p className="text-2xl font-bold text-red-600 mb-2">Dados não carregados</p>
-          <p className="text-gray-600 text-center max-w-md">
+      <div className="pt-24 min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-8 px-4 text-center">
+        <div>
+          <p className="text-3xl font-bold text-red-600 mb-3">Dados não carregados</p>
+          <p className="text-gray-600 max-w-md mx-auto">
             {result?.erro || 'Ocorreu um erro ao buscar os resultados.'}
           </p>
         </div>
 
         <button
           onClick={openReset}
-          className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-4 px-10 rounded-xl shadow-lg text-lg transition transform hover:scale-105"
+          className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-5 px-12 rounded-2xl shadow-2xl text-xl transition transform hover:scale-105"
         >
           Baixar Dados Oficiais da Caixa Agora
         </button>
 
-        <p className="text-sm text-gray-500 text-center max-w-lg">
-          Clique no botão acima → uma nova aba vai abrir → espere aparecer "reset_sucesso": true
+        <p className="text-gray-500 max-w-lg">
+          Clique no botão → abre uma nova aba → espere aparecer <strong>"reset_sucesso": true</strong>
           <br />
-          Depois volte aqui e recarregue a página (Ctrl + F5).
+          Depois volte aqui e aperte <strong>Ctrl + F5</strong>
         </p>
       </div>
     );
   }
 
+  // TELA PRINCIPAL — TUDO FUNCIONANDO
   return (
-    <div className="pt-24 pb-12 bg-gray-50 min-h-screen">
+    <div className="pt-24 pb-16 bg-gray-50 min-h-screen">
       <div className="max-w-5xl mx-auto px-4">
+
         {/* Cabeçalho */}
-        <div className="flex justify-between items-center mb-10">
-          <h1 className="text-4xl font-bold text-gray-900">Resultados da Lotofácil</h1>
+        <div className="flex justify-between items-center mb-12">
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-900">Resultados da Lotofácil</h1>
           <button
             onClick={openDebug}
-            className="bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition"
+            className="bg-gray-800 hover:bg-gray-900 text-white px-5 py-2 rounded-lg text-sm font-medium"
           >
-            Debug / Validar Dados
+            Debug / Validar
           </button>
         </div>
 
-        {/* Card do último sorteio */}
-        <div className="bg-white rounded-3xl shadow-xl overflow-hidden mb-10">
-          <div className="bg-gradient-to-r from-purple-700 to-purple-900 p-8 text-white">
-            <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-              <div className="flex items-center gap-4">
-                <div className="bg-white/20 p-4 rounded-xl">
-                  <Trophy className="w-12 h-12 text-yellow-300" />
+        {/* Último Concurso */}
+        <div className="bg-white rounded-3xl shadow-2xl overflow-hidden mb-12">
+          <div className="bg-gradient-to-r from-purple-700 to-purple-900 p-10 text-white">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="flex items-center gap-6">
+                <div className="bg-white/20 p-5 rounded-2xl">
+                  <Trophy className="w-16 h-16 text-yellow-300" />
                 </div>
                 <div>
-                  <h2 className="text-4xl font-bold">Concurso {result.ultimo_concurso}</h2>
-                  <p className="text-purple-100 text-lg flex items-center gap-2 mt-1">
-                    <Calendar className="w-5 h-5" />
+                  <h2 className="text-5xl font-bold">Concurso {result.ultimo_concurso}</h2>
+                  <p className="text-2xl text-purple-100 flex items-center gap-3 mt-2">
+                    <Calendar className="w-6 h-6" />
                     {result.data_ultimo}
                   </p>
                 </div>
@@ -130,67 +131,67 @@ export function Results() {
             </div>
           </div>
 
-          <div className="p-8">
-            <h3 className="text-center text-xl font-semibold text-gray-800 mb-6">
+          <div className="p-10">
+            <h3 className="text-2xl font-bold text-center text-gray-800 mb-8">
               Dezenas Sorteadas
             </h3>
-            <div className="flex flex-wrap justify-center gap-4">
+            <div className="flex flex-wrap justify-center gap-5">
               {result.ultimos_numeros.map((num) => (
                 <LotteryBall
                   key={num}
                   number={num}
-                  className="bg-purple-100 text-purple-800 border-2 border-purple-300 text-2xl w-16 h-16"
+                  className="bg-purple-100 text-purple-800 border-4 border-purple-300 text-3xl w-20 h-20 font-bold"
                 />
               ))}
             </div>
 
-            <p className="text-center text-gray-600 mt-8 text-lg">
+            <p className="text-center text-xl text-gray-600 mt-10">
               Total de sorteios analisados:{' '}
-              <span className="font-bold text-purple-700">{result.total_sorteios}</span>
+              <span className="font-bold text-purple-700 text-2xl">{result.total_sorteios}</span>
             </p>
           </div>
         </div>
 
         {/* Quentes e Frios */}
-        <div className="grid md:grid-cols-2 gap-8">
+        <div className="grid md:grid-cols-2 gap-10">
           {/* Quentes */}
-          <div className="bg-gradient-to-br from-green-50 to-green-100 p-8 rounded-2xl shadow-md shadow-lg">
-            <h3 className="text-2xl font-bold text-green-800 mb-6 flex items-center gap-3">
-              <MapPin className="w-8 h-8 text-green-600" />
-              Números Mais Quentes (Top 10)
+          <div className="bg-gradient-to-br from-green-50 to-green-100 p-10 rounded-3xl shadow-xl">
+            <h3 className="text-3xl font-bold text-green-800 mb-8 flex items-center gap-4 justify-center">
+              <MapPin className="w-10 h-10 text-green-600" />
+              Números Mais Quentes
             </h3>
-            <div className="flex flex-wrap justify-center gap-3">
+            <div className="flex flex-wrap justify-center gap-4">
               {result.quentes.map((num) => (
                 <LotteryBall
                   key={num}
                   number={num}
-                  className="bg-green-200 text-green-900 border-2 border-green-400 text-xl w-14 h-14"
+                  className="bg-green-200 text-green-900 border-4 border-green-500 text-2xl w-16 h-16 font-bold"
                 />
               ))}
             </div>
           </div>
 
           {/* Frios */}
-          <div className="bg-gradient-to-br from-red-50 to-red-100 p-8 rounded-2xl shadow-lg">
-            <h3 className="text-2xl font-bold text-red-800 mb-6 flex items-center gap-3">
-              <Monitor className="w-8 h-8 text-red-600" />
-              Números Mais Frios (Top 10)
+          <div className="bg-gradient-to-br from-red-50 to-red-100 p-10 rounded-3xl shadow-xl">
+            <h3 className="text-3xl font-bold text-red-800 mb-8 flex items-center gap-4 justify-center">
+              <Monitor className="w-10 h-10 text-red-600" />
+              Números Mais Frios
             </h3>
-            <div className="flex flex-wrap justify-center gap- gap-3">
+            <div className="flex flex-wrap justify-center gap-4">
               {result.frios.map((num) => (
                 <LotteryBall
                   key={num}
                   number={num}
-                  className="bg-red-200 text-red-900 border-2 border-red-400 text-xl w-14 h-14"
+                  className="bg-red-200 text-red-900 border-4 border-red-500 text-2xl w-16 h-16 font-bold"
                 />
               ))}
             </div>
           </div>
         </div>
 
-        <div className="text-center mt-12 text-gray-500 text-sm">
-          Dados 100% oficiais da Caixa • Atualizado automaticamente
-        </div>
+        <p className="text-center mt-16 text-gray-500">
+          Dados 100% oficiais da Caixa Econômica Federal • Atualizado automaticamente
+        </p>
       </div>
     </div>
   );
