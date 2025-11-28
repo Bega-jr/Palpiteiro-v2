@@ -23,7 +23,7 @@ export function Results() {
       try {
         // MUDE AQUI: URL do seu backend (ex: https://seu-app.onrender.com)
         const API_BASE = 'https://palpiteiro-ia-backend-docker.onrender.com'; // Ou o URL real
-        const response = await fetch(`${API_BASE}/api/resultados`);
+        const response = await fetch('https://palpiteiro-ia-backend-docker.onrender.com/api/resultados');
         if (!response.ok) throw new Error('Falha na API');
         
         const data: BackendResult = await response.json();
