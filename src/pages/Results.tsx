@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
-import { Search, Calendar, Trophy, MapPin, Monitor } from "lucide-react";
-import { toast } from "sonner";
-import { LotteryBall } from "../components/LotteryBall";
+import { useEffect, useState } from 'react';
+import { Search, Calendar, Trophy, MapPin, Monitor } from 'lucide-react';
+import { toast } from 'sonner';
+import { LotteryBall } from '../components/LotteryBall';
 
 interface BackendResult {
   ultimo_concurso: number;
@@ -16,127 +16,119 @@ interface BackendResult {
 export function Results() {
   const [result, setResult] = useState<BackendResult | null>(null);
   const [loading, setLoading] = useState(true);
+  const [debugMode, setDebugMode] = useState(false); // Para você testar
 
   useEffect(() => {
     const fetchResults = async () => {
       try {
-        const response = await fetch("/api/resultados");
-        if (!response.ok) throw new Error("Erro na API");
-
+        // MUDE AQUI: URL do seu backend (ex: https://seu-app.onrender.com)
+        const API_BASE = 'https://palpiteiro-ia-backend-docker.onrender.com'; // Ou o URL real
+        const response = await fetch(`${API_BASE}/api/resultados`);
+        if (!response.ok) throw new Error('Falha na API');
+        
         const data: BackendResult = await response.json();
-
         if (data.erro) {
           toast.error(data.erro);
+          // Se erro de histórico vazio, sugere reset
+          if (data.erro.includes('vazio')) {
+            toast.info('Execute /api/reset no backend para popular dados reais.');
+          }
           return;
         }
-
         setResult(data);
+        toast.success(`Último sorteio carregado: Concurso ${data.ultimo_concurso}`);
       } catch (err) {
-        toast.error("Não foi possível carregar os resultados.");
+        toast.error('Erro ao conectar com o backend. Verifique se está online.');
       } finally {
         setLoading(false);
       }
     };
-
     fetchResults();
   }, []);
+
+  const toggleDebug = () => {
+    setDebugMode(!debugMode);
+    window.open(`${window.location.origin.replace('netlify.app', 'seu-backend.com')}/api/debug`, '_blank');
+  };
 
   if (loading) {
     return (
       <div className="pt-24 min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-xl text-gray-600">Carregando resultados...</p>
+        <p className="text-xl text-gray-600">Carregando último sorteio...</p>
       </div>
     );
   }
 
-  if (!result) {
+  if (!result || result.erro) {
     return (
-      <div className="pt-24 min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-xl text-red-600">Erro ao carregar os resultados.</p>
+      <div className="pt-24 min-h-screen bg-gray-50 flex flex-col items-center justify-center">
+        <p className="text-xl text-red-600 mb-4">Erro: {result?.erro || 'Falha no carregamento'}</p>
+        <button 
+          onClick={() => window.location.href = '/api/reset'} // Ajuste para backend
+          className="bg-blue-500 text-white px-4 py-2 rounded"
+        >
+          Resetar e Popular Dados Reais
+        </button>
+        <p className="text-sm text-gray-500 mt-2">Depois, recarregue a página.</p>
       </div>
     );
   }
 
   return (
     <div className="pt-24 pb-12 bg-gray-50 min-h-screen">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-
-        <div className="text-center mb-10">
-          <h1 className="text-4xl font-bold text-gray-900">Resultados da Lotofácil</h1>
-          <p className="text-gray-600 mt-2">Últimos números sorteados e estatísticas completas</p>
+      <div className="max-w-5xl mx-auto px-4">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Resultados Lotofácil</h1>
+          <button 
+            onClick={toggleDebug}
+            className="bg-gray-600 text-white px-3 py-1 rounded text-sm"
+          >
+            Debug/Validar
+          </button>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-          <div className="bg-gradient-to-r from-purple-700 to-purple-900 p-8 text-white">
-            <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-              <div className="flex items-center gap-4">
-                <div className="bg-white/20 p-3 rounded-xl">
-                  <Trophy className="w-10 h-10 text-yellow-300" />
-                </div>
-                <div>
-                  <h2 className="text-3xl font-bold">Concurso {result.ultimo_concurso}</h2>
-                  <div className="flex items-center gap-2 text-purple-100 mt-1">
-                    <Calendar className="w-5 h-5" />
-                    {result.data_ultimo}
-                  </div>
-                </div>
-              </div>
-            </div>
+        {/* ÚLTIMO SORTEIO - PRIORIDADE 1 */}
+        <div className="bg-white rounded-2xl shadow-sm p-6 mb-8">
+          <div className="bg-purple-600 text-white p-4 rounded-t-xl">
+            <h2 className="text-xl font-bold flex items-center gap-2">
+              <Trophy className="w-5 h-5" />
+              Concurso {result.ultimo_concurso} - {result.data_ultimo}
+            </h2>
           </div>
-
-          <div className="p-8">
-            <h3 className="text-lg font-semibold text-gray-700 mb-6 text-center">
-              Dezenas Sorteadas
-            </h3>
-            <div className="flex flex-wrap justify-center gap-4 mb-10">
-              {result.ultimos_numeros.map((num) => (
-                <LotteryBall
-                  key={num}
-                  number={num}
-                  className="bg-purple-100 text-purple-800 border-purple-300"
-                />
+          <div className="p-6">
+            <h3 className="text-center font-semibold mb-4">Números Sorteados</h3>
+            <div className="flex flex-wrap justify-center gap-2">
+              {result.ultimos_numeros.map(num => (
+                <LotteryBall key={num} number={num} className="bg-purple-100 text-purple-800" />
               ))}
             </div>
+            <p className="text-center text-sm text-gray-500 mt-4">
+              Total de sorteios no histórico: {result.total_sorteios}
+            </p>
+          </div>
+        </div>
 
-            <div className="text-center text-sm text-gray-600 mb-8">
-              Total de sorteios analisados: <span className="font-bold">{result.total_sorteios}</span>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-8">
-              <div className="bg-green-50 p-6 rounded-xl border border-green-200">
-                <h3 className="font-bold text-lg text-gray-800 mb-4 flex items-center gap-3">
-                  <MapPin className="w-6 h-6 text-green-600" />
-                  Números Mais Quentes (Top 10)
-                </h3>
-                <div className="flex flex-wrap gap-3 justify-center">
-                  {result.quentes.map((num) => (
-                    <LotteryBall
-                      key={num}
-                      number={num}
-                      className="bg-green-100 text-green-800 border-green-300"
-                    />
-                  ))}
-                </div>
+        {/* ESTATÍSTICAS - SÓ MOSTRA SE TUDO OK */}
+        {debugMode ? (
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="bg-green-50 p-4 rounded-xl">
+              <h3 className="font-bold mb-2">Quentes (Top 10)</h3>
+              <div className="flex flex-wrap gap-2">
+                {result.quentes.map(num => (
+                  <LotteryBall key={num} number={num} className="bg-green-100 text-green-800" />
+                ))}
               </div>
-
-              <div className="bg-red-50 p-6 rounded-xl border border-red-200">
-                <h3 className="font-bold text-lg text-gray-800 mb-4 flex items-center gap-3">
-                  <Monitor className="w-6 h-6 text-red-600" />
-                  Números Mais Frios (Top 10)
-                </h3>
-                <div className="flex flex-wrap gap-3 justify-center">
-                  {result.frios.map((num) => (
-                    <LotteryBall
-                      key={num}
-                      number={num}
-                      className="bg-red-100 text-red-800 border-red-300"
-                    />
-                  ))}
-                </div>
+            </div>
+            <div className="bg-red-50 p-4 rounded-xl">
+              <h3 className="font-bold mb-2">Frios (Top 10)</h3>
+              <div className="flex flex-wrap gap-2">
+                {result.frios.map(num => (
+                  <LotteryBall key={num} number={num} className="bg-red-100 text-red-800" />
+                ))}
               </div>
             </div>
           </div>
-        </div>
+        ) : null}
       </div>
     </div>
   );
