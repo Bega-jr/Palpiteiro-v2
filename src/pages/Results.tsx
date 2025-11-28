@@ -23,7 +23,7 @@ export function Results() {
         setLoading(true);
 
         const response = await fetch(
-          'palpiteiro-v2-backend-production.up.railway.app'
+          'palpiteiro-v2-backend.vercel.app'
         );
 
         if (!response.ok) {
@@ -55,12 +55,12 @@ export function Results() {
 
   // Abre a página de debug em nova aba
   const openDebug = () => {
-    window.open('palpiteiro-v2-backend-production.up.railway.app/api/debug', '_blank');
+    window.open('palpiteiro-v2-backend.vercel.app/api/debug', '_blank');
   };
 
   // Abre o reset em nova aba
   const openReset = () => {
-    window.open('palpiteiro-v2-backend-production.up.railway.app/api/reset', '_blank');
+    window.open('palpiteiro-v2-backend.vercel.app/api/reset', '_blank');
   };
 
   if (loading) {
