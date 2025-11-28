@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react";
+import { useEffect, useState } from "react";
 import { Search, Calendar, Trophy, MapPin, Monitor } from "lucide-react";
 import { toast } from "sonner";
 import { LotteryBall } from "../components/LotteryBall";
