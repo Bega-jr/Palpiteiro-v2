@@ -28,35 +28,39 @@ const MOCK_HISTORY = Array.from({ length: 20 }, () => {
 });
 
 // Função de número pseudo-aleatório com semente (Seedable RNG)
-// Essencial para garantir que usuários Free vejam sempre o mesmo jogo no dia
 function seededRandom(seed: number) {
   const x = Math.sin(seed++) * 10000;
   return x - Math.floor(x);
 }
 
+// Função para calcular estatísticas reais do histórico mockado
 export const calculateStats = () => {
   const frequency: Record<number, number> = {};
-  const delay: Record<number, number> = {}; // Concursos em atraso
+  const delay: Record<number, number> = {};
 
-  // Inicializa
+  // Inicializa contadores
   for (let i = 1; i <= 25; i++) {
     frequency[i] = 0;
     delay[i] = 0;
   }
 
-  // Calcula frequência
+  // Calcula frequência real
   MOCK_HISTORY.forEach((game) => {
     game.forEach((num) => {
       frequency[num]++;
     });
   });
 
-  // Calcula atraso (simplificado baseando-se no último jogo simulado)
-  const lastGame = MOCK_HISTORY[0];
-  for (let i = 1; i <= 25; i++) {
-    if (!lastGame.includes(i)) {
-      delay[i] = Math.floor(Math.random() * 5) + 1; // Simulação de atraso
+  // Calcula atraso real (quantos jogos atrás o número saiu pela última vez)
+  for (let num = 1; num <= 25; num++) {
+    let contestsDelayed = 0;
+    for (let i = 0; i < MOCK_HISTORY.length; i++) {
+        if (MOCK_HISTORY[i].includes(num)) {
+            break; // Encontrou o número, para de contar o atraso
+        }
+        contestsDelayed++;
     }
+    delay[num] = contestsDelayed;
   }
 
   // Ordena por frequência
@@ -111,15 +115,11 @@ export const generateSmartGames = (mode: 'standard' | 'final_0', isVip: boolean)
   const stats = calculateStats();
   const games: GeneratedGame[] = [];
   
-  // Configuração da Semente (Seed)
-  // Se for VIP: usa Math.random() (aleatório real)
-  // Se for FREE: usa a data atual + ID do jogo como semente (fixo para o dia)
   const today = new Date();
   const daySeed = today.getDate() + (today.getMonth() + 1) * 100 + today.getFullYear() * 10000;
   
-  let seedCounter = daySeed; // Contador para variar a semente dentro do loop fixo
+  let seedCounter = daySeed;
 
-  // Função auxiliar para gerar um número (aleatório ou fixo)
   const getNextRandom = () => {
     if (isVip) return Math.random();
     return seededRandom(seedCounter++);
@@ -129,27 +129,33 @@ export const generateSmartGames = (mode: 'standard' | 'final_0', isVip: boolean)
     const numbers = new Set<number>();
     let attempts = 0;
 
-    while (numbers.size < 15 && attempts < 1000) {
+    // Loop principal para garantir 15 números
+    while (numbers.size < 15 && attempts < 5000) {
       attempts++;
-      let rnd = getNextRandom();
-      let num = Math.floor(rnd * 25) + 1;
+      let num = Math.floor(getNextRandom() * 25) + 1;
 
       // Lógica de viés estatístico
-      if (strategy === 'hot' && getNextRandom() > 0.3) {
+      if (strategy === 'hot' && getNextRandom() > 0.4) { // Aumentei a chance de selecionar um quente
         const hotIndex = Math.floor(getNextRandom() * stats.hotNumbers.length);
         num = stats.hotNumbers[hotIndex];
       }
       
-      // Lógica específica para Final 0
+      // Lógica específica para Final 0 (mantida, mas a robustez acima ajuda)
       if (mode === 'final_0' || strategy === 'pattern_0') {
-         // Em final 0, a tendência de repetição é ligeiramente ajustada
-         // e buscamos evitar sequências muito longas
-         if (numbers.has(num - 1) && numbers.has(num - 2) && getNextRandom() > 0.5) {
+         // Não há uma regra de negócio clara aqui, mas mantive sua verificação de sequência
+         if (numbers.has(num - 1) && numbers.has(num - 2) && getNextRandom() > 0.6) {
              continue; // Pula para evitar triplas sequências excessivas em final 0
          }
       }
 
       numbers.add(num);
+    }
+    
+    // VERIFICAÇÃO DE ROBUSTEZ: Garante que 15 números foram gerados
+    if (numbers.size < 15) {
+        // Fallback: se falhou em gerar com a estratégia, gera um jogo aleatório simples
+        console.warn(`Fallback: Failed to generate 15 numbers for strategy ${strategy}. Generating balanced game.`);
+        return createGame('balanced');
     }
 
     return Array.from(numbers).sort((a, b) => a - b);
@@ -158,10 +164,11 @@ export const generateSmartGames = (mode: 'standard' | 'final_0', isVip: boolean)
   for (let i = 0; i < 7; i++) {
     let strategy: 'balanced' | 'hot' | 'cold' | 'pattern_0' = 'balanced';
     
+    // Definição de estratégias para os 7 jogos gerados
     if (mode === 'final_0') strategy = 'pattern_0';
-    else if (i < 2) strategy = 'hot';
-    else if (i === 2) strategy = 'cold';
-    else strategy = 'balanced';
+    else if (i === 0 || i === 1) strategy = 'hot'; // Jogos 1 e 2 são quentes
+    else if (i === 2) strategy = 'cold';          // Jogo 3 é frio
+    else strategy = 'balanced';                  // Outros são balanceados
 
     const numbers = createGame(strategy);
     

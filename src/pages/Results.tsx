@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Search, Calendar, MapPin, Monitor, Trophy } from 'lucide-react';
-import { LotteryResult } from '../utils/mockResults';
+// Importação de mockResults e LotteryResult foi removida pois não são usadas no código final.
+// import { LotteryResult } from '../utils/mockResults'; 
 import { toast } from 'sonner';
 import { LotteryBall } from '../components/LotteryBall';
 
-// A interface LotteryResult foi mantida, mas adaptada para a resposta do backend
-// O backend retorna: ultimo_concurso, data_ultimo, ultimos_numeros, quentes, frios, total_sorteios
+// A interface BackendResult reflete exatamente a estrutura que você descreveu.
 interface BackendResult {
   ultimo_concurso: number;
   data_ultimo: string;
@@ -13,7 +13,7 @@ interface BackendResult {
   quentes: number[];
   frios: number[];
   total_sorteios: number;
-  erro?: string;
+  erro?: string; // Propriedade opcional para comunicação de erros via API
 }
 
 export function Results() {
@@ -41,7 +41,7 @@ export function Results() {
 
         setResult(data);
       } catch (err) {
-        console.error(err);
+        // console.error(err); // Mantido em comentário para ambiente de desenvolvimento
         setError(true);
         toast.error('Erro ao carregar resultados. Tente novamente.');
       } finally {
@@ -52,12 +52,14 @@ export function Results() {
     fetchResults();
   }, []);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value);
-  };
+  // A função formatCurrency não é utilizada em nenhum lugar do código atual, 
+  // então ela pode ser removida para evitar código morto, ou mantida caso planeje usá-la depois.
+  // const formatCurrency = (value: number) => {
+  //   return new Intl.NumberFormat('pt-BR', {
+  //     style: 'currency',
+  //     currency: 'BRL'
+  //   }).format(value);
+  // };
 
   if (loading) {
     return (
@@ -67,6 +69,7 @@ export function Results() {
     );
   }
 
+  // Combina a verificação de erro e resultado nulo para uma renderização mais limpa
   if (error || !result) {
     return (
       <div className="pt-24 pb-12 bg-gray-50 min-h-screen flex justify-center items-center">
@@ -113,7 +116,7 @@ export function Results() {
                 </div>
               </div>
               
-              {/* Removido: result.acumulado não existe na resposta do backend */}
+              {/* O BLOCO ABAIXO FOI REMOVIDO/COMENTADO pois 'acumulado' não está na interface BackendResult: */}
               {/* {result.acumulado && (
                 <div className="bg-yellow-400 text-purple-900 px-4 py-1 rounded-full font-bold text-sm animate-pulse">
                   ACUMULOU!
