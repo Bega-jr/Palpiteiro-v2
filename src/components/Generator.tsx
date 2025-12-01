@@ -1,217 +1,226 @@
-import { useState } from 'react'
-import { Wand2, RefreshCw, Grid3X3, List, Lock, Save } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { generateSmartGames, GeneratedGame } from '../utils/lotteryLogic';
-import { LotteryBall } from './LotteryBall';
-import { StatsPanel } from './StatsPanel';
-import { TicketView } from './TicketView';
-import { useAuth } from '../contexts/AuthContext';
-import { Link } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { useState, useEffect } from 'react'
+import { Wand2, RefreshCw, Grid3X3, List, Lock, Save, CheckCircle, Trophy } from 'lucide-react'
+import { motion,ÁN AnimatePresence } from 'framer-motion'
+import { LotteryBall } from './LotteryBall'
+import { TicketView } from './TicketView'
+import { useAuth } from '../contexts/AuthContext'
+import { Link } from 'react-router-dom'
+import { supabase } from '../lib/supabase'
+import { toast } from 'sonner'
 
-export default function Generator() {
-  const { isVip, user } = useAuth();
-  const [games, setGames] = useState<GeneratedGame[]>([]);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [mode, setMode] = useState<'standard' | 'final_0'>('standard');
-  const [viewMode, setViewMode] = useState<'balls' | 'ticket'>('balls');
-  const [savedGames, setSavedGames] = useState<number[]>([]);
+interface Aposta {
+  id: number
+  numbers: number[]
+  stats: { sum: number; even: number; odd: number }
+}
 
-  const handleGenerate = () => {
-    setIsGenerating(true);
-    setGames([]);
-    
-    setTimeout(() => {
-      const newGames = generateSmartGames(mode, isVip);
-      setGames(newGames);
-      setIsGenerating(false);
-    }, 1500);
-  };
+export function Generator() {
+  const { isVip, user } = useAuth()
+  const [apostas, setApostas] = useState<Aposta[]>([])
+  const [fixos, setFixos] = useState<number[]>([])
+  const [ultimoConcurso, setUltimoConcurso] = useState<string>('')
+  const [dataSorteio, setDataSorteio] = useState<string>('')
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [viewMode, setViewMode] = useState<'balls' | 'ticket'>('balls')
+  const [savedGames, setSavedGames] = useState<number[]>([])
 
-  const saveGame = async (game: GeneratedGame) => {
-    if (!user) return;
-    
+  const BACKEND_URL = 'https://palpiteiro-v2-backend.vercel.app'
+
+  // Cache pro não-VIP (1 vez por dia)
+  const [cacheDia, setCacheDia] = useState<string>('')
+
+  const handleGenerate = async () => {
+    setIsGenerating(true)
+
+    try {
+      const hoje = new Date().toISOString().split('T')[0]
+
+      // Não-VIP: só gera uma vez por dia
+      if (!isVip && cacheDia === hoje && apostas.length > 0) {
+        toast.info('Palpites fixos do dia já exibidos! Torne-se VIP para gerar novos.')
+        setIsGenerating(false)
+        return
+      }
+
+      const response = await fetch(`${BACKEND_URL}/api/palpites`)
+      const data = await response.json()
+
+      if (data.apostas && data.fixos) {
+        const novosJogos: Aposta[] = data.apostas.map((nums: number[], i: number) => ({
+          id: i + 1,
+          numbers: nums,
+          stats: {
+            sum: nums.reduce((a, b) => a + b, 0),
+            even: nums.filter(n => n % 2 === 0).length,
+            odd: nums.filter(n => n % 2 !== 0).length
+          }
+        }))
+
+        setApostas(novosJogos)
+        setFixos(data.fixos)
+        setUltimoConcurso(data.ultimo_concurso || 'Atual')
+        setDataSorteio(data.data_ultimo || hoje)
+        setCacheDia(hoje)
+        toast.success(isVip ? 'Novos palpites gerados!' : 'Palpites do dia carregados!')
+      }
+    } catch (err) {
+      toast.error('Erro ao gerar palpites')
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
+  const saveGame = async (aposta: Aposta) => {
+    if (!user) {
+      toast.error('Faça login para salvar')
+      return
+    }
     try {
       const { error } = await supabase.from('saved_games').insert({
         user_id: user.id,
-        numbers: game.numbers,
-        contest_type: mode,
-        stats: game.stats
-      });
-
+        numbers: aposta.numbers,
+        contest_type: 'standard',
+        stats: aposta.stats
+      })
       if (!error) {
-        setSavedGames(prev => [...prev, game.id]);
+        setSavedGames(prev => [...prev, aposta.id])
+        toast.success('Jogo salvo!')
       }
-    } catch (err) {
-      console.error('Erro ao salvar', err);
+    } catch {
+      toast.error('Erro ao salvar')
     }
-  };
+  }
+
+  useEffect(() => {
+    handleGenerate()
+  }, [])
 
   return (
-    <section className="py-12 bg-gray-50" id="generator">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        
+    <section className="py-12 bg-gradient-to-b from-purple-50 to-white" id="generator">
+      <div className="max-w-6xl mx-auto px-4">
         <div className="text-center mb-10">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">Gerador de Desdobramentos</h2>
-          <p className="text-gray-600 max-w-2xl mx-auto">
-            Gere 7 jogos estratégicos utilizando nossa engine estatística.
-          </p>
+          <h2 className="text-4xl font-bold text-gray-900 mb-4">Gerador de Palpites Inteligentes</h2>
+          <p className="text-lg text-gray-600">7 apostas baseadas em dados oficiais da Caixa</p>
         </div>
 
-        <StatsPanel />
+        {/* Concurso usado */}
+        {ultimoConcurso && (
+          <div className="max-w-md mx-auto mb-8 bg-gradient-to-r from-blue-600 to-purple-600 text-white p-5 rounded-2xl shadow-xl text-center">
+            <Trophy className="w-8 h-8 mx-auto mb-2" />
+            <p className="text-sm opacity-90">Baseado no</p>
+            <p className="text-2xl font-bold">Concurso {ultimoConcurso}</p>
+            <p className="text-sm">{dataSorteio} • Dados oficiais Caixa</p>
+          </div>
+        )}
 
-        {!isVip && (
-          <div className="max-w-2xl mx-auto mb-8 bg-yellow-50 border border-yellow-200 p-4 rounded-lg flex items-start gap-3">
-            <Lock className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-            <div className="text-sm text-yellow-800">
-              <p className="font-bold">Modo Gratuito Ativo</p>
-              <p>Você está vendo os <strong>palpites fixos do dia</strong>. Para gerar novas combinações ilimitadas e salvar seus jogos, <Link to="/vip" className="underline font-bold hover:text-yellow-900">torne-se VIP</Link>.</p>
+        {/* Fixos do dia */}
+        {fixos.length > 0 && (
+          <div className="text-center mb-10">
+            <p className="text-sm text-gray-600 mb-3">Números Fixos (mais sorteados recentemente)</p>
+            <div className="flex justify-center gap-4 flex-wrap">
+              {fixos.map(n => (
+                <div key={n} className="w-16 h-16 bg-gradient-to-br from-yellow-500 to-orange-600 text-white rounded-full flex items-center justify-center text-2xl font-extrabold shadow-lg ring-4 ring-yellow-300">
+                  {n.toString().padStart(2, '0')}
+                </div>
+              ))}
             </div>
           </div>
         )}
 
-        <div className="flex flex-col items-center justify-center gap-6 mb-12">
-          <div className="flex flex-wrap justify-center gap-4">
-            <div className="flex items-center bg-white p-1 rounded-lg border border-gray-200 shadow-sm">
-              <button
-                onClick={() => setMode('standard')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-                  mode === 'standard' 
-                    ? 'bg-primary-600 text-white shadow-sm' 
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Concurso Padrão
+        {/* Botões */}
+        <div className="flex justify-center gap-6 mb-12">
+          {apostas.length > 0 && (
+            <div className="bg-white rounded-xl shadow-md p-2">
+              <button onClick={() => setViewMode('balls')} className={`p-3 rounded-lg ${viewMode === 'balls' ? 'bg-purple-600 text-white' : 'text-gray-600'}`}>
+                <List className="w-6 h-6" />
               </button>
-              <button
-                onClick={() => setMode('final_0')}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center gap-2 ${
-                  mode === 'final_0' 
-                    ? 'bg-purple-600 text-white shadow-sm' 
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Final 0
+              <button onClick={() => setViewMode('ticket')} className={`p-3 rounded-lg ${viewMode === 'ticket' ? 'bg-purple-600 text-white' : 'text-gray-600'}`}>
+                <Grid3X3 className="w-6 h-6" />
               </button>
             </div>
-
-            {games.length > 0 && (
-              <div className="flex items-center bg-white p-1 rounded-lg border border-gray-200 shadow-sm">
-                <button
-                  onClick={() => setViewMode('balls')}
-                  className={`p-2 rounded-md transition-all ${viewMode === 'balls' ? 'bg-gray-100 text-gray-900' : 'text-gray-400'}`}
-                  title="Visualização em Bolas"
-                >
-                  <List className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => setViewMode('ticket')}
-                  className={`p-2 rounded-md transition-all ${viewMode === 'ticket' ? 'bg-gray-100 text-gray-900' : 'text-gray-400'}`}
-                  title="Visualização em Volante"
-                >
-                  <Grid3X3 className="w-5 h-5" />
-                </button>
-              </div>
-            )}
-          </div>
+          )}
 
           <button
             onClick={handleGenerate}
             disabled={isGenerating}
-            className={`
-              relative overflow-hidden px-8 py-4 rounded-xl font-bold text-lg shadow-lg transition-all transform hover:-translate-y-1 w-full sm:w-auto
-              ${isGenerating 
-                ? 'bg-gray-400 cursor-not-allowed' 
-                : mode === 'final_0' ? 'bg-purple-600 hover:bg-purple-700 text-white shadow-purple-500/30' : 'bg-primary-600 hover:bg-primary-700 text-white shadow-primary-500/30'
-              }
-            `}
+            className={`px-10 py-5 rounded-2xl font-bold text-xl shadow-2xl transition-all transform hover:scale-105 flex items-center gap-3 ${
+              isGenerating ? 'bg-gray-400' : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
+            }`}
           >
-            <span className="flex items-center justify-center gap-2">
-              {isGenerating ? (
-                <>
-                  <RefreshCw className="w-5 h-5 animate-spin" />
-                  Processando...
-                </>
-              ) : (
-                <>
-                  <Wand2 className="w-5 h-5" />
-                  {games.length > 0 && !isVip ? "Recarregar Palpites Fixos" : "Gerar 7 Palpites"}
-                </>
-              )}
-            </span>
+            {isGenerating ? (
+              <>
+                <RefreshCw className="w-7 h-7 animate-spin" />
+                Gerando...
+              </>
+            ) : (
+              <>
+                <Wand2 className="w-7 h-7" />
+                {isVip ? 'Gerar Novos Palpites' : 'Ver Palpites do Dia'}
+              </>
+            )}
           </button>
         </div>
 
-        <div className={viewMode === 'ticket' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" : "grid grid-cols-1 gap-4"}>
+        {/* Apostas */}
+        <div className={viewMode === 'ticket' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" : "space-y-8"}>
           <AnimatePresence mode="wait">
-            {games.map((game, index) => (
+            {apostas.map((aposta, i) => (
               <motion.div
-                key={game.id}
-                initial={{ opacity: 0, y: 20 }}
+                key={aposta.id}
+                initial={{ opacity: 0, y: 50 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className={`bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all ${viewMode === 'ticket' ? 'flex flex-col items-center' : ''}`}
+                transition={{ delay: i * 0.1 }}
+                className="bg-white rounded-3xl p-8 shadow-2xl border border-gray-100 hover:shadow-3xl transition-all"
               >
-                <div className={`flex ${viewMode === 'ticket' ? 'flex-col text-center' : 'flex-row justify-between'} items-center gap-4 mb-4 w-full`}>
-                  <div className="flex items-center gap-3">
-                    <span className="flex items-center justify-center w-8 h-8 bg-gray-900 text-white rounded-full font-bold text-sm">
-                      {game.id}
-                    </span>
-                    <div>
-                      <h3 className="font-semibold text-gray-900 text-sm">
-                        {game.type === 'hot' && 'Estratégia: Quentes'}
-                        {game.type === 'cold' && 'Estratégia: Zebras'}
-                        {game.type === 'balanced' && 'Estratégia: Equilíbrio'}
-                        {game.type === 'pattern_0' && 'Estratégia: Final 0'}
-                      </h3>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    {viewMode === 'balls' && (
-                      <div className="hidden md:flex gap-4 text-xs text-gray-500 bg-gray-50 px-3 py-1.5 rounded-lg mr-2">
-                        <span title="Soma">Soma: <strong>{game.stats.sum}</strong></span>
-                        <span title="Pares/Ímpares">P/I: <strong>{game.stats.even}/{game.stats.odd}</strong></span>
-                      </div>
-                    )}
-                    
-                    {isVip && (
-                      <button 
-                        onClick={() => saveGame(game)}
-                        disabled={savedGames.includes(game.id)}
-                        className={`p-2 rounded-full transition-colors ${savedGames.includes(game.id) ? 'bg-green-100 text-green-600' : 'hover:bg-gray-100 text-gray-400'}`}
-                        title="Salvar Jogo"
-                      >
-                        {savedGames.includes(game.id) ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-                      </button>
-                    )}
-                  </div>
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-2xl font-bold text-purple-700">
+                    Aposta {i + 1} {i >= 5 && '(Modo Grok)'}
+                  </h3>
+                  {isVip && (
+                    <button
+                      onClick={() => saveGame(aposta)}
+                      disabled={savedGames.includes(aposta.id)}
+                      className={`p-3 rounded-full transition-all ${
+                        savedGames.includes(aposta.id)
+                          ? 'bg-green-100 text-green-600'
+                          : 'hover:bg-gray-100 text-gray-500'
+                      }`}
+                    >
+                      {savedGames.includes(aposta.id) ? <CheckCircle className="w-6 h-6" /> : <Save className="w-6 h-6" />}
+                    </button>
+                  )}
                 </div>
 
                 {viewMode === 'balls' ? (
-                  <div className="flex flex-wrap gap-2 justify-center md:justify-start">
-                    {game.numbers.map((num) => (
-                      <LotteryBall key={num} number={num} />
+                  <div className="flex flex-wrap gap-4 justify-center">
+                    {aposta.numbers.map(num => (
+                      <LotteryBall
+                        key={num}
+                        number={num}
+                        isFixed={fixos.includes(num)}
+                        className={fixos.includes(num) ? 'ring-4 ring-yellow-400 scale-110' : ''}
+                      />
                     ))}
                   </div>
                 ) : (
-                  <TicketView selectedNumbers={game.numbers} className="w-full max-w-[240px] border-gray-200" />
+                  <TicketView selectedNumbers={aposta.numbers} className="w-full" />
                 )}
               </motion.div>
             ))}
           </AnimatePresence>
         </div>
+
+        {!isVip && apostas.length > 0 && (
+          <div className="text-center mt-12 bg-gradient-to-r from-purple-600 to-pink-600 text-white p-8 rounded-3xl">
+            <Lock className="w-12 h-12 mx-auto mb-4" />
+            <h3 className="text-2xl font-bold mb-3">Quer palpites novos todo dia?</h3>
+            <p className="text-lg mb-6">Torne-se VIP e gere palpites ilimitados com estratégias exclusivas!</p>
+            <Link to="/vip" className="bg-white text-purple-600 px-8 py-4 rounded-xl font-bold text-xl hover:bg-gray-100 transition">
+              Virar VIP Agora
+            </Link>
+          </div>
+        )}
       </div>
     </section>
-  );
+  )
 }
-
-function Check({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-    </svg>
-  );
-}
-
-
