@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import { Calendar, Trophy, DollarSign, Loader2, AlertCircle } from 'lucide-react'
+import { Calendar, Trophy, DollarSign, Loader2, MapPin, AlertCircle } from 'lucide-react'
 import { LotteryBall } from '../components/LotteryBall'
+import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 
 interface Faixa {
@@ -9,14 +10,21 @@ interface Faixa {
   premio: string
 }
 
+interface CidadePremiada {
+  cidade: string
+  uf: string
+  ganhadores: number
+}
+
 interface Resultado {
   ultimo_concurso: string
   data_ultimo: string
   ultimos_numeros: number[]
   ganhadores: Faixa[]
-  arrecadacao_total: string
+  arrecadacao: string
   estimativa_proximo: string
   acumulou: boolean
+  cidades_premiadas: CidadePremiada[]
   acumulado_especial?: string
   observacao?: string
   data_referencia: string
@@ -55,14 +63,13 @@ export function Results() {
   if (!resultado || resultado.erro) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-2xl text-red-600">
-          {resultado?.erro || 'Erro ao carregar resultados. Tente novamente.'}
-        </p>
+        <p className="text-2xl text-red-600">Erro ao carregar. Tente novamente.</p>
       </div>
     )
   }
 
   const isAcumulou = resultado.acumulou
+  const cidades = resultado.cidades_premiadas || []
 
   return (
     <div className="min-h-screen bg-white pt-20">
@@ -137,11 +144,33 @@ export function Results() {
           </table>
         </div>
 
+        {/* Cidades Premiadas */}
+        {cidades.length > 0 && (
+          <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-3xl shadow-2xl p-12 mb-16">
+            <div className="flex items-center justify-center gap-4 mb-10">
+              <MapPin className="w-14 h-14 text-orange-600" />
+              <h3 className="text-4xl font-black text-orange-800">Cidades Premiadas - 15 Acertos</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {cidades.map((cidade, i) => (
+                <div key={i} className="bg-white rounded-3xl p-10 shadow-2xl border-4 border-orange-200 text-center">
+                  <p className="text-3xl font-black text-orange-700 mb-4">
+                    {cidade.cidade.toUpperCase()}/{cidade.uf}
+                  </p>
+                  <p className="text-xl text-gray-700">
+                    {cidade.ganhadores} ganhador{cidade.ganhadores > 1 ? 'es' : ''}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Informações Adicionais */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-center">
           <div className="bg-gray-100 rounded-2xl p-8">
             <p className="text-lg font-bold text-gray-700">Arrecadação Total</p>
-            <p className="text-3xl font-black text-gray-900 mt-4">{resultado.arrecadacao_total}</p>
+            <p className="text-3xl font-black text-gray-900 mt-4">{resultado.arrecadacao}</p>
           </div>
           <div className="bg-gray-100 rounded-2xl p-8">
             <p className="text-lg font-bold text-gray-700">Estimativa Próximo</p>
