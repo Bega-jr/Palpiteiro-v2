@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Wand2, RefreshCw, Trophy, TrendingUp } from 'lucide-react'
+import { Wand2, RefreshCw, Grid3X3, List, Save, CheckCircle, Trophy } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { LotteryBall } from './LotteryBall'
 import { TicketView } from './TicketView'
