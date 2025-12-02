@@ -1,10 +1,27 @@
 import { useState, useEffect } from 'react'
-import { Calendar, Trophy, DollarSign, MapPin, AlertCircle } from 'lucide-react'
+import { Calendar, Trophy, DollarSign, Loader2 } from 'lucide-react'
 import { LotteryBall } from '../components/LotteryBall'
 import { toast } from 'sonner'
 
+interface Faixa {
+  faixa: string
+  ganhadores: number
+  premio: string
+}
+
+interface Resultado {
+  ultimo_concurso: string
+  data_ultimo: string
+  ultimos_numeros: number[]
+  ganhadores: Faixa[]
+  arrecadacao: string
+  estimativa_proximo: string
+  acumulou: boolean
+  data_referencia: string
+}
+
 export function Results() {
-  const [resultado, setResultado] = useState<any>(null)
+  const [resultado, setResultado] = useState<Resultado | null>(null)
   const [loading, setLoading] = useState(true)
 
   const BACKEND_URL = 'https://palpiteiro-v2-backend.vercel.app'
@@ -29,8 +46,8 @@ export function Results() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="mt-6 text-xl text-gray-600">Carregando resultados...</p>
+          <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="mt-4 text-lg text-gray-600">Carregando...</p>
         </div>
       </div>
     )
@@ -39,75 +56,77 @@ export function Results() {
   if (!resultado || resultado.erro) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-2xl text-red-600">Erro ao carregar. Tente novamente.</p>
+        <p className="text-xl text-red-600">Erro ao carregar. Tente novamente.</p>
       </div>
     )
   }
 
   const isAcumulou = resultado.acumulou
-  const cidades = resultado.ganhadores[0]?.cidades || []
 
   return (
-    <div className="min-h-screen bg-white pt-20 pb-32 px-4">
-      <div className="max-w-4xl mx-auto">
-        {/* Concurso + Data */}
-        <div className="text-center mb-16">
-          <h1 className="text-6xl md:text-8xl font-black text-purple-900 mb-4">
+    <div className="min-h-screen bg-white pt-20">
+      <div className="max-w-4xl mx-auto px-4">
+        {/* Concurso e Data */}
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">
             Concurso {resultado.ultimo_concurso}
           </h1>
-          <p className="text-2xl text-gray-600 flex items-center justify-center gap-3">
-            <Calendar className="w-8 h-8" />
+          <p className="text-lg text-gray-600 flex items-center justify-center gap-2">
+            <Calendar className="w-6 h-6" />
             {resultado.data_ultimo}
           </p>
         </div>
 
         {/* Números Sorteados */}
-        <div className="flex flex-wrap justify-center gap-6 mb-20">
-          {resultado.ultimos_numeros.map((num: number) => (
-            <LotteryBall key={num} number={num} className="w-20 h-20 md:w-28 md:h-28 text-4xl md:text-5xl" />
-          ))}
+        <div className="bg-gray-50 rounded-2xl p-8 mb-12">
+          <h3 className="text-xl font-bold text-center mb-6 text-gray-800">Números Sorteados</h3>
+          <div className="flex flex-wrap justify-center gap-4">
+            {resultado.ultimos_numeros.map(num => (
+              <LotteryBall key={num} number={num} className="w-16 h-16 text-2xl" />
+            ))}
+          </div>
         </div>
 
-        {/* ACUMULOU! ou PRÊMIO ESTIMADO */}
-        <div className="text-center mb-20">
-          {isAcumulou ? (
-            <div className="inline-block">
-              <div className="bg-red-600 text-white px-16 py-8 rounded-full text-5xl md:text-7xl font-black animate-pulse shadow-2xl">
-                ACUMULOU!
-              </div>
-              <p className="text-4xl md:text-6xl font-black text-red-600 mt-8">
-                {resultado.estimativa_proximo}
-              </p>
-              <p className="text-2xl text-gray-700 mt-4">Próximo concurso</p>
-            </div>
-          ) : (
-            <div>
-              <p className="text-4xl md:text-6xl font-black text-green-600">
-                {resultado.estimativa_proximo}
-              </p>
-              <p className="text-2xl text-gray-700 mt-4">Estimativa próximo concurso</p>
-            </div>
-          )}
-        </div>
+        {/* ACUMULOU! ou Estimativa */}
+        {isAcumulou ? (
+          <div className="bg-red-100 border-2 border-red-300 rounded-2xl p-8 mb-12 text-center">
+            <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-4" />
+            <h3 className="text-3xl font-bold text-red-800 mb-4">ACUMULOU!</h3>
+            <p className="text-2xl text-red-700">
+              Próximo prêmio estimado: {resultado.estimativa_proximo}
+            </p>
+          </div>
+        ) : (
+          <div className="bg-green-100 border-2 border-green-300 rounded-2xl p-8 mb-12 text-center">
+            <TrendingUp className="w-12 h-12 text-green-600 mx-auto mb-4" />
+            <h3 className="text-3xl font-bold text-green-800 mb-4">Próximo Prêmio</h3>
+            <p className="text-2xl text-green-700">
+              {resultado.estimativa_proximo}
+            </p>
+          </div>
+        )}
 
-        {/* Tabela Premiação */}
-        <div className="bg-gray-50 rounded-3xl p-10 mb-20">
-          <table className="w-full text-left">
+        {/* Tabela de Premiação */}
+        <div className="bg-white rounded-2xl shadow-lg p-8 mb-12">
+          <h3 className="text-xl font-bold text-center mb-6 text-gray-800">Premiação por Faixa</h3>
+          <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b-4 border-purple-200">
-                <th className="pb-6 text-2xl font-bold text-purple-800">Faixa</th>
-                <th className="pb-6 text-2xl font-bold text-center text-purple-800">Ganhadores</th>
-                <th className="pb-6 text-2xl font-bold text-right text-purple-800">Prêmio</th>
+              <tr className="bg-gray-100 border-b-2 border-gray-300">
+                <th className="px-6 py-4 text-lg font-bold text-gray-700">Faixa</th>
+                <th className="px-6 py-4 text-lg font-bold text-center text-gray-700">Ganhadores</th>
+                <th className="px-6 py-4 text-lg font-bold text-right text-gray-700">Prêmio</th>
               </tr>
             </thead>
             <tbody>
-              {resultado.ganhadores.map((faixa: any, i: number) => (
-                <tr key={i} className="border-b border-gray-200">
-                  <td className="py-6 text-2xl font-black text-purple-700">{faixa.faixa}</td>
-                  <td className="py-6 text-2xl font-bold text-center text-gray-800">
+              {resultado.ganhadores.map((faixa, i) => (
+                <tr key={i} className="border-b border-gray-200 hover:bg-gray-50">
+                  <td className="px-6 py-4 text-lg font-semibold text-gray-900">
+                    {faixa.faixa}
+                  </td>
+                  <td className="px-6 py-4 text-lg font-semibold text-center text-gray-900">
                     {faixa.ganhadores > 0 ? faixa.ganhadores.toLocaleString('pt-BR') : '-'}
                   </td>
-                  <td className="py-6 text-2xl font-bold text-right text-green-600">
+                  <td className="px-6 py-4 text-lg font-semibold text-right text-green-700">
                     {faixa.premio}
                   </td>
                 </tr>
@@ -116,30 +135,19 @@ export function Results() {
           </table>
         </div>
 
-        {/* Cidades Premiadas */}
-        {cidades.length > 0 && (
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-4 mb-8">
-              <MapPin className="w-12 h-12 text-orange-600" />
-              <h3 className="text-4xl font-black text-orange-800">Cidades Premiadas (15 acertos)</h3>
-            </div>
-            <div className="flex flex-wrap justify-center gap-8">
-              {cidades.map((c: any, i: number) => (
-                <div key={i} className="bg-orange-50 rounded-2xl p-8 border-4 border-orange-300 text-center">
-                  <p className="text-3xl font-black text-orange-700">
-                    {c.cidade.toUpperCase()}/{c.uf}
-                  </p>
-                  <p className="text-xl text-gray-700 mt-3">
-                    {c.ganhadores} ganhador{c.ganhadores > 1 ? 'es' : ''}
-                  </p>
-                </div>
-              ))}
-            </div>
+        {/* Informações Adicionais */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center mb-20">
+          <div className="bg-gray-100 rounded-2xl p-8">
+            <p className="text-lg font-bold text-gray-700">Arrecadação Total</p>
+            <p className="text-3xl font-black text-gray-900 mt-4">{resultado.arrecadacao}</p>
           </div>
-        )}
+          <div className="bg-gray-100 rounded-2xl p-8">
+            <p className="text-lg font-bold text-gray-700">Total de Sorteios</p>
+            <p className="text-3xl font-black text-gray-900 mt-4">{resultado.total_sorteios}</p>
+          </div>
+        </div>
 
-        {/* Rodapé */}
-        <div className="text-center text-gray-500 text-lg mt-32">
+        <div className="text-center text-gray-600 text-base">
           <p>Dados oficiais da Caixa Econômica Federal</p>
           <p>Palpiteiro V2 © 2025</p>
         </div>
