@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Wand2, RefreshCw, Grid3X3, List, Lock, Save, CheckCircle, Trophy } from 'lucide-react'
-import { motion,ÁN AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { LotteryBall } from './LotteryBall'
 import { TicketView } from './TicketView'
 import { useAuth } from '../contexts/AuthContext'
