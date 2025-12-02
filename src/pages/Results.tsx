@@ -9,6 +9,12 @@ interface Faixa {
   premio: string
 }
 
+interface CidadePremiada {
+  cidade: string
+  uf: string
+  ganhadores: number
+}
+
 interface Resultado {
   ultimo_concurso: string
   data_ultimo: string
@@ -17,7 +23,7 @@ interface Resultado {
   arrecadacao: string
   estimativa_proximo: string
   acumulou: boolean
-  local_sorteio?: string
+  cidades_premiadas?: CidadePremiada[]
   acumulado_especial?: string
   observacao?: string
   data_referencia: string
@@ -62,6 +68,7 @@ export function Results() {
   }
 
   const isAcumulou = resultado.acumulou
+  const cidades = resultado.cidades_premiadas || []
   const temAcumuladoEspecial = resultado.acumulado_especial && resultado.acumulado_especial !== 'R$0,00'
 
   return (
@@ -77,16 +84,6 @@ export function Results() {
             {resultado.data_ultimo}
           </p>
         </div>
-
-        {/* Local do Sorteio */}
-        {resultado.local_sorteio && (
-          <div className="text-center mb-8">
-            <p className="text-xl text-gray-600 flex items-center justify-center gap-3">
-              <MapPin className="w-8 h-8" />
-              Sorteio realizado em <strong>{resultado.local_sorteio}</strong>
-            </p>
-          </div>
-        )}
 
         {/* Números Sorteados */}
         <div className="bg-gray-50 rounded-2xl p-8 mb-12">
@@ -159,7 +156,29 @@ export function Results() {
           </table>
         </div>
 
-        {/* Informações Adicionais */}
+        {/* Cidades Premiadas */}
+        {cidades.length > 0 && (
+          <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-2xl p-8 mb-12">
+            <div className="flex items-center justify-center gap-4 mb-8">
+              <MapPin className="w-12 h-12 text-orange-600" />
+              <h3 className="text-3xl font-black text-orange-800">Cidades Premiadas - 15 Acertos</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {cidades.map((cidade, i) => (
+                <div key={i} className="bg-white rounded-2xl p-6 shadow-lg border-2 border-orange-200 text-center">
+                  <p className="text-2xl font-black text-orange-700">
+                    {cidade.cidade.toUpperCase()}/{cidade.uf}
+                  </p>
+                  <p className="text-lg text-gray-700 mt-2">
+                    {cidade.ganhadores} ganhador{cidade.ganhadores > 1 ? 'es' : ''}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Arrecadação e Estimativa */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-center">
           <div className="bg-gray-100 rounded-2xl p-8">
             <p className="text-lg font-bold text-gray-700">Arrecadação Total</p>
@@ -171,7 +190,7 @@ export function Results() {
           </div>
         </div>
 
-        {/* Observação (ex: sorteio especial) */}
+        {/* Observação */}
         {resultado.observacao && (
           <div className="text-center mt-16">
             <p className="text-xl font-bold text-purple-700">{resultado.observacao}</p>
