@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Calendar, Trophy, Users, DollarSign, Loader2 } from 'lucide-react'
+import { Calendar, Trophy, Users, DollarSign, Loader2, MapPin } from 'lucide-react'
 import { LotteryBall } from '../components/LotteryBall'
 import { toast } from 'sonner'
 
@@ -7,6 +7,7 @@ interface Faixa {
   faixa: string
   ganhadores: number
   premio: string
+  cidades?: { cidade: string; uf: string; ganhadores: number }[]
 }
 
 interface Resultado {
@@ -61,8 +62,10 @@ export function Results() {
     )
   }
 
+  const cidadesPremiadas = resultado.ganhadores[0]?.cidades || []
+
   return (
-    <div className="pt-20 pb-16 bg-gradient-to-b from-purple-50 to-white min-h-screen">
+    <div className="pt-20 pb-24 min-h-screen bg-gradient-to-b from-purple-50 to-white">
       <div className="max-w-6xl mx-auto px-4">
         {/* Cabeçalho */}
         <div className="text-center mb-12">
@@ -128,6 +131,34 @@ export function Results() {
             ))}
           </div>
         </div>
+
+        {/* Cidades Premiadas (15 acertos) */}
+        {cidadesPremiadas.length > 0 ? (
+          <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-3xl shadow-2xl p-12 mb-16">
+            <div className="flex items-center justify-center gap-4 mb-10">
+              <MapPin className="w-14 h-14 text-orange-600" />
+              <h3 className="text-5xl font-black text-orange-800">Cidades Premiadas - 15 Acertos</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {cidadesPremiadas.map((cidade, i) => (
+                <div key={i} className="bg-white rounded-3xl p-10 shadow-2xl border-4 border-orange-200 text-center">
+                  <p className="text-4xl font-black text-orange-700 mb-4">
+                    {cidade.cidade.toUpperCase()}/{cidade.uf}
+                  </p>
+                  <p className="text-2xl text-gray-700">
+                    {cidade.ganhadores} ganhador{cidade.ganhadores > 1 ? 'es' : ''}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="bg-gradient-to-br from-gray-100 to-gray-200 rounded-3xl shadow-2xl p-12 mb-16 text-center">
+            <Trophy className="w-20 h-20 mx-auto mb-6 text-yellow-500" />
+            <h3 className="text-4xl font-black text-gray-800 mb-4">Nenhum ganhador de 15 acertos</h3>
+            <p className="text-2xl text-gray-600">O prêmio acumulou para o próximo concurso!</p>
+          </div>
+        )}
 
         {/* Informações Adicionais */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-10 text-center">
