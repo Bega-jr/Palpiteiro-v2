@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react'
-import { Calendar, Trophy, DollarSign, Loader2 } from 'lucide-react'
+import { Calendar, Trophy, DollarSign, TrendingUp, Loader2 } from 'lucide-react'
 import { LotteryBall } from '../components/LotteryBall'
 import { toast } from 'sonner'
-import { Calendar, Trophy, DollarSign, Loader2, AlertCircle, TrendingUp } from 'lucide-react'
 
 interface Faixa {
   faixa: string
   ganhadores: number
   premio: string
+  cidades?: { cidade: string; uf: string }[]
 }
 
 interface Resultado {
@@ -35,7 +35,7 @@ export function Results() {
         const data = await res.json()
         setResultado(data)
       } catch {
-        toast.error('Erro ao carregar resultados')
+        toast.error('Erro ao carregar resultados oficiais')
       } finally {
         setLoading(false)
       }
@@ -48,7 +48,7 @@ export function Results() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="mt-4 text-lg text-gray-600">Carregando...</p>
+          <p className="mt-4 text-lg text-gray-600">Carregando resultados...</p>
         </div>
       </div>
     )
@@ -69,7 +69,7 @@ export function Results() {
       <div className="max-w-4xl mx-auto px-4">
         {/* Concurso e Data */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+          <h1 className="text-5xl font-bold text-gray-900 mb-2">
             Concurso {resultado.ultimo_concurso}
           </h1>
           <p className="text-lg text-gray-600 flex items-center justify-center gap-2">
@@ -91,17 +91,21 @@ export function Results() {
         {/* ACUMULOU! ou Estimativa */}
         {isAcumulou ? (
           <div className="bg-red-100 border-2 border-red-300 rounded-2xl p-8 mb-12 text-center">
-            <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-4" />
-            <h3 className="text-3xl font-bold text-red-800 mb-4">ACUMULOU!</h3>
-            <p className="text-2xl text-red-700">
-              Próximo prêmio estimado: {resultado.estimativa_proximo}
-            </p>
+            <div className="inline-block">
+              <div className="bg-red-600 text-white px-12 py-6 rounded-full text-4xl font-black shadow-2xl">
+                ACUMULOU!
+              </div>
+              <p className="text-3xl font-bold text-red-700 mt-6">
+                {resultado.estimativa_proximo}
+              </p>
+              <p className="text-xl text-gray-700 mt-2">Próximo concurso</p>
+            </div>
           </div>
         ) : (
           <div className="bg-green-100 border-2 border-green-300 rounded-2xl p-8 mb-12 text-center">
             <TrendingUp className="w-12 h-12 text-green-600 mx-auto mb-4" />
-            <h3 className="text-3xl font-bold text-green-800 mb-4">Próximo Prêmio</h3>
-            <p className="text-2xl text-green-700">
+            <p className="text-3xl font-bold text-green-800 mb-4">Próximo Prêmio</p>
+            <p className="text-4xl font-black text-green-700">
               {resultado.estimativa_proximo}
             </p>
           </div>
@@ -137,18 +141,18 @@ export function Results() {
         </div>
 
         {/* Informações Adicionais */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center mb-20">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-center">
           <div className="bg-gray-100 rounded-2xl p-8">
             <p className="text-lg font-bold text-gray-700">Arrecadação Total</p>
             <p className="text-3xl font-black text-gray-900 mt-4">{resultado.arrecadacao}</p>
           </div>
           <div className="bg-gray-100 rounded-2xl p-8">
-            <p className="text-lg font-bold text-gray-700">Total de Sorteios</p>
-            <p className="text-3xl font-black text-gray-900 mt-4">{resultado.total_sorteios}</p>
+            <p className="text-lg font-bold text-gray-700">Estimativa Próximo</p>
+            <p className="text-3xl font-black text-green-600 mt-4">{resultado.estimativa_proximo}</p>
           </div>
         </div>
 
-        <div className="text-center text-gray-600 text-base">
+        <div className="text-center text-gray-600 text-base mt-20">
           <p>Dados oficiais da Caixa Econômica Federal</p>
           <p>Palpiteiro V2 © 2025</p>
         </div>
