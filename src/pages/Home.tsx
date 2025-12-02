@@ -1,6 +1,6 @@
 import { Hero } from '../components/Hero';
 import { DailyTip } from '../components/DailyTip';
-import Generator from '../components/Generator';
+import {Generator} from '../components/Generator';
 import { Features } from '../components/Features';
 
 export function Home() {
