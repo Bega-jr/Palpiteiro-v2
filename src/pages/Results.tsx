@@ -106,7 +106,7 @@ export function Results() {
               ACUMULOU!
             </div>
             {temAcumuladoEspecial ? (
-              <div className="mt-8>
+              <div className="mt-8">
                 <p className="text-3xl font-bold text-red-700">
                   {resultado.acumulado_especial}
                 </p>
