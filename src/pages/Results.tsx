@@ -1,198 +1,155 @@
-import { useEffect, useState } from 'react';
-import { Calendar, Trophy, MapPin, Monitor } from 'lucide-react';
-import { toast } from 'sonner';
-import { LotteryBall } from '../components/LotteryBall';
+import { useState, useEffect } from 'react'
+import { Calendar, Trophy, Users, DollarSign, Loader2 } from 'lucide-react'
+import { LotteryBall } from '../components/LotteryBall'
+import { toast } from 'sonner'
 
-interface BackendResult {
-  ultimo_concurso: number;
-  data_ultimo: string;
-  ultimos_numeros: number[];
-  quentes: number[];
-  frios: number[];
-  total_sorteios: number;
-  erro?: string;
+interface Faixa {
+  faixa: string
+  ganhadores: number
+  premio: string
+}
+
+interface Resultado {
+  ultimo_concurso: string
+  data_ultimo: string
+  ultimos_numeros: number[]
+  ganhadores: Faixa[]
+  arrecadacao: string
+  estimativa_proximo: string
+  acumulou: boolean
+  data_referencia: string
 }
 
 export function Results() {
-  const [result, setResult] = useState<BackendResult | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [resultado, setResultado] = useState<Resultado | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  // URL DO SEU BACKEND NO VERCEL — NUNCA MAIS MUDE
-  const BACKEND_URL = 'https://palpiteiro-v2-backend.vercel.app';
+  const BACKEND_URL = 'https://palpiteiro-v2-backend.vercel.app'
 
-   useEffect(() => {
-    const fetchResults = async () => {
+  useEffect(() => {
+    async function carregar() {
       try {
-        setLoading(true);
-
-        const response = await fetch(`${BACKEND_URL}/api/resultados`);
-
-        if (!response.ok) {
-          throw new Error(`Erro ${response.status}`);
-        }
-
-        const data: BackendResult = await response.json();
-
-        if (data.erro) {
-          toast.error(data.erro);
-          toast.info('Clique no botão abaixo para baixar os dados oficiais da Caixa');
-          return;
-        }
-
-        setResult(data);
-        toast.success(`Concurso ${data.ultimo_concurso} carregado com sucesso!`);
+        setLoading(true)
+        const res = await fetch(`${BACKEND_URL}/api/resultados`)
+        const data = await res.json()
+        setResultado(data)
       } catch (err) {
-        console.error('Erro ao conectar:', err);
-        toast.error('Não foi possível conectar ao servidor');
+        toast.error('Erro ao carregar resultados oficiais')
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
-    };
+    }
+    carregar()
+  }, [])
 
-    fetchResults(); // Chama a função
-  }, []);
-
-  const openReset = () => {
-    window.open(`${BACKEND_URL}/api/reset`, '_blank');
-  };
-
-  const openDebug = () => {
-    window.open(`${BACKEND_URL}/api/debug`, '_blank');
-  };
-
-  // TELA DE CARREGANDO
   if (loading) {
     return (
-      <div className="pt-24 min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-2xl text-gray-700">Carregando resultados da Caixa...</p>
+      <div className="pt-32 text-center">
+        <Loader2 className="w-16 h-16 animate-spin mx-auto text-purple-600" />
+        <p className="mt-6 text-2xl text-gray-600">Carregando resultados oficiais da Caixa...</p>
       </div>
-    );
+    )
   }
 
-  // TELA DE ERRO / HISTÓRICO VAZIO
-  if (!result || result.erro) {
+  if (!resultado || resultado.erro) {
     return (
-      <div className="pt-24 min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-8 px-4 text-center">
-        <div>
-          <p className="text-3xl font-bold text-red-600 mb-3">Dados não carregados</p>
-          <p className="text-gray-600 max-w-md mx-auto">
-            {result?.erro || 'Ocorreu um erro ao buscar os resultados.'}
+      <div className="pt-32 text-center">
+        <p className="text-2xl text-red-600">
+          {resultado?.erro || 'Erro ao carregar resultados. Tente novamente.'}
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="pt-20 pb-16 bg-gradient-to-b from-purple-50 to-white min-h-screen">
+      <div className="max-w-6xl mx-auto px-4">
+        {/* Cabeçalho */}
+        <div className="text-center mb-12">
+          <h1 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 mb-3">
+            Resultados da Lotofácil
+          </h1>
+          <p className="text-xl text-gray-700">
+            Dados oficiais da Caixa — Atualizado em <strong>{resultado.data_referencia}</strong>
           </p>
         </div>
 
-        <button
-          onClick={openReset}
-          className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-5 px-12 rounded-2xl shadow-2xl text-xl transition transform hover:scale-105"
-        >
-          Baixar Dados Oficiais da Caixa Agora
-        </button>
-
-        <p className="text-gray-500 max-w-lg">
-          Clique no botão → abre uma nova aba → espere aparecer <strong>"reset_sucesso": true</strong>
-          <br />
-          Depois volte aqui e aperte <strong>Ctrl + F5</strong>
-        </p>
-      </div>
-    );
-  }
-
-  // TELA PRINCIPAL — TUDO FUNCIONANDO
-  return (
-    <div className="pt-24 pb-16 bg-gray-50 min-h-screen">
-      <div className="max-w-5xl mx-auto px-4">
-
-        {/* Cabeçalho */}
-        <div className="flex justify-between items-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900">Resultados da Lotofácil</h1>
-          <button
-            onClick={openDebug}
-            className="bg-gray-800 hover:bg-gray-900 text-white px-5 py-2 rounded-lg text-sm font-medium"
-          >
-            Debug / Validar
-          </button>
+        {/* Concurso Atual */}
+        <div className="bg-gradient-to-r from-purple-900 to-pink-800 text-white rounded-3xl shadow-2xl p-12 mb-16 text-center">
+          <Trophy className="w-20 h-20 mx-auto mb-4 text-yellow-400" />
+          <h2 className="text-7xl font-black mb-2">Concurso {resultado.ultimo_concurso}</h2>
+          <p className="text-3xl opacity-90 flex items-center justify-center gap-3">
+            <Calendar className="w-10 h-10" />
+            {resultado.data_ultimo}
+          </p>
+          {resultado.acumulou && (
+            <div className="mt-8 bg-yellow-400 text-purple-900 px-12 py-5 rounded-full inline-block text-4xl font-black animate-pulse">
+              ACUMULOU!
+            </div>
+          )}
         </div>
 
-        {/* Último Concurso */}
-        <div className="bg-white rounded-3xl shadow-2xl overflow-hidden mb-12">
-          <div className="bg-gradient-to-r from-purple-700 to-purple-900 p-10 text-white">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-              <div className="flex items-center gap-6">
-                <div className="bg-white/20 p-5 rounded-2xl">
-                  <Trophy className="w-16 h-16 text-yellow-300" />
-                </div>
-                <div>
-                  <h2 className="text-5xl font-bold">Concurso {result.ultimo_concurso}</h2>
-                  <p className="text-2xl text-purple-100 flex items-center gap-3 mt-2">
-                    <Calendar className="w-6 h-6" />
-                    {result.data_ultimo}
-                  </p>
+        {/* Números Sorteados */}
+        <div className="bg-white rounded-3xl shadow-2xl p-12 mb-16">
+          <h3 className="text-4xl font-bold text-center mb-10 text-purple-800">Números Sorteados</h3>
+          <div className="flex flex-wrap justify-center gap-6">
+            {resultado.ultimos_numeros.map(num => (
+              <LotteryBall key={num} number={num} className="w-24 h-24 text-4xl shadow-2xl" />
+            ))}
+          </div>
+        </div>
+
+        {/* Premiação Completa */}
+        <div className="bg-white rounded-3xl shadow-2xl p-12 mb-16">
+          <h3 className="text-4xl font-bold text-center mb-12 text-purple-800">Premiação Completa</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-8">
+            {resultado.ganhadores.map((faixa, i) => (
+              <div key={i} className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-3xl p-8 border-4 border-purple-200 shadow-xl text-center">
+                <p className="text-5xl font-black text-purple-700 mb-4">{faixa.faixa}</p>
+                <div className="space-y-6">
+                  <div>
+                    <p className="text-lg font-bold text-gray-800 flex items-center justify-center gap-3">
+                      <Users className="w-7 h-7" /> Ganhadores
+                    </p>
+                    <p className="text-3xl font-black text-purple-800">
+                      {faixa.ganhadores > 0 ? faixa.ganhadores : '-'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-lg font-bold text-gray-800 flex items-center justify-center gap-3">
+                      <DollarSign className="w-7 h-7" /> Prêmio
+                    </p>
+                    <p className="text-2xl font-black text-green-600">
+                      {faixa.premio}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
-
-          <div className="p-10">
-            <h3 className="text-2xl font-bold text-center text-gray-800 mb-8">
-              Dezenas Sorteadas
-            </h3>
-            <div className="flex flex-wrap justify-center gap-5">
-              {result.ultimos_numeros.map((num) => (
-                <LotteryBall
-                  key={num}
-                  number={num}
-                  className="bg-purple-100 text-purple-800 border-4 border-purple-300 text-3xl w-20 h-20 font-bold"
-                />
-              ))}
-            </div>
-
-            <p className="text-center text-xl text-gray-600 mt-10">
-              Total de sorteios analisados:{' '}
-              <span className="font-bold text-purple-700 text-2xl">{result.total_sorteios}</span>
-            </p>
+            ))}
           </div>
         </div>
 
-        {/* Quentes e Frios */}
-        <div className="grid md:grid-cols-2 gap-10">
-          {/* Quentes */}
-          <div className="bg-gradient-to-br from-green-50 to-green-100 p-10 rounded-3xl shadow-xl">
-            <h3 className="text-3xl font-bold text-green-800 mb-8 flex items-center gap-4 justify-center">
-              <MapPin className="w-10 h-10 text-green-600" />
-              Números Mais Quentes
-            </h3>
-            <div className="flex flex-wrap justify-center gap-4">
-              {result.quentes.map((num) => (
-                <LotteryBall
-                  key={num}
-                  number={num}
-                  className="bg-green-200 text-green-900 border-4 border-green-500 text-2xl w-16 h-16 font-bold"
-                />
-              ))}
-            </div>
+        {/* Informações Adicionais */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-10 text-center">
+          <div className="bg-gradient-to-br from-purple-100 to-pink-100 rounded-3xl p-10 shadow-2xl">
+            <p className="text-2xl font-bold text-gray-800">Arrecadação Total</p>
+            <p className="text-4xl font-black text-purple-700 mt-4">{resultado.arrecadacao}</p>
           </div>
-
-          {/* Frios */}
-          <div className="bg-gradient-to-br from-red-50 to-red-100 p-10 rounded-3xl shadow-xl">
-            <h3 className="text-3xl font-bold text-red-800 mb-8 flex items-center gap-4 justify-center">
-              <Monitor className="w-10 h-10 text-red-600" />
-              Números Mais Frios
-            </h3>
-            <div className="flex flex-wrap justify-center gap-4">
-              {result.frios.map((num) => (
-                <LotteryBall
-                  key={num}
-                  number={num}
-                  className="bg-red-200 text-red-900 border-4 border-red-500 text-2xl w-16 h-16 font-bold"
-                />
-              ))}
-            </div>
+          <div className="bg-gradient-to-br from-green-100 to-emerald-100 rounded-3xl p-10 shadow-2xl">
+            <p className="text-2xl font-bold text-gray-800">Estimativa Próximo</p>
+            <p className="text-4xl font-black text-green-600 mt-4">{resultado.estimativa_proximo}</p>
+          </div>
+          <div className="bg-gradient-to-br from-blue-100 to-cyan-100 rounded-3xl p-10 shadow-2xl">
+            <p className="text-2xl font-bold text-gray-800">Total de Sorteios</p>
+            <p className="text-4xl font-black text-blue-700 mt-4">{resultado.total_sorteios}</p>
           </div>
         </div>
 
-        <p className="text-center mt-16 text-gray-500">
-          Dados 100% oficiais da Caixa Econômica Federal • Atualizado automaticamente
-        </p>
+        <div className="text-center text-gray-500 text-lg mt-20">
+          <p>Dados oficiais da Caixa Econômica Federal</p>
+          <p>Palpiteiro V2 © 2025 — O mais completo do Brasil</p>
+        </div>
       </div>
     </div>
-  );
+  )
 }

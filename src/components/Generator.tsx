@@ -1,16 +1,16 @@
 import { useState, useEffect } from 'react'
-import { Wand2, RefreshCw, Grid3X3, List, Lock, Save, CheckCircle, Trophy } from 'lucide-react'
+import { Wand2, RefreshCw, Grid3X3, List, Save, CheckCircle, Trophy } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { LotteryBall } from './LotteryBall'
 import { TicketView } from './TicketView'
 import { useAuth } from '../contexts/AuthContext'
-import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { toast } from 'sonner'
 
 interface Aposta {
   id: number
   numbers: number[]
+  estrategia: string
   stats: { sum: number; even: number; odd: number }
 }
 
@@ -26,7 +26,6 @@ export function Generator() {
 
   const BACKEND_URL = 'https://palpiteiro-v2-backend.vercel.app'
 
-  // Cache pro não-VIP (1 vez por dia)
   const [cacheDia, setCacheDia] = useState<string>('')
 
   const handleGenerate = async () => {
@@ -35,7 +34,6 @@ export function Generator() {
     try {
       const hoje = new Date().toISOString().split('T')[0]
 
-      // Não-VIP: só gera uma vez por dia
       if (!isVip && cacheDia === hoje && apostas.length > 0) {
         toast.info('Palpites fixos do dia já exibidos! Torne-se VIP para gerar novos.')
         setIsGenerating(false)
@@ -45,10 +43,12 @@ export function Generator() {
       const response = await fetch(`${BACKEND_URL}/api/palpites`)
       const data = await response.json()
 
-      if (data.apostas && data.fixos) {
+      if (data.apostas && Array.isArray(data.apostas)) {
+        const estrategias = ['Quentes', 'Frios', 'Equilibrado', 'Final 0', 'Padrão', 'Modo Grok', 'Surpresa']
         const novosJogos: Aposta[] = data.apostas.map((nums: number[], i: number) => ({
           id: i + 1,
           numbers: nums,
+          estrategia: estrategias[i] || 'Estratégia',
           stats: {
             sum: nums.reduce((a, b) => a + b, 0),
             even: nums.filter(n => n % 2 === 0).length,
@@ -57,24 +57,22 @@ export function Generator() {
         }))
 
         setApostas(novosJogos)
-        setFixos(data.fixos)
+        setFixos(data.fixos || [])
         setUltimoConcurso(data.ultimo_concurso || 'Atual')
         setDataSorteio(data.data_ultimo || hoje)
         setCacheDia(hoje)
-        toast.success(isVip ? 'Novos palpites gerados!' : 'Palpites do dia carregados!')
+      } else {
+        toast.error('Erro ao gerar palpites')
       }
     } catch (err) {
-      toast.error('Erro ao gerar palpites')
+      toast.error('Erro ao conectar com o servidor')
     } finally {
       setIsGenerating(false)
     }
   }
 
   const saveGame = async (aposta: Aposta) => {
-    if (!user) {
-      toast.error('Faça login para salvar')
-      return
-    }
+    if (!user) return toast.error('Faça login para salvar')
     try {
       const { error } = await supabase.from('saved_games').insert({
         user_id: user.id,
@@ -84,10 +82,10 @@ export function Generator() {
       })
       if (!error) {
         setSavedGames(prev => [...prev, aposta.id])
-        toast.success('Jogo salvo!')
+        toast.success('Jogo salvo com sucesso!')
       }
     } catch {
-      toast.error('Erro ao salvar')
+      toast.error('Erro ao salvar jogo')
     }
   }
 
@@ -96,30 +94,28 @@ export function Generator() {
   }, [])
 
   return (
-    <section className="py-12 bg-gradient-to-b from-purple-50 to-white" id="generator">
-      <div className="max-w-6xl mx-auto px-4">
-        <div className="text-center mb-10">
-          <h2 className="text-4xl font-bold text-gray-900 mb-4">Gerador de Palpites Inteligentes</h2>
-          <p className="text-lg text-gray-600">7 apostas baseadas em dados oficiais da Caixa</p>
+    <section className="py-16 bg-gradient-to-b from-purple-50 to-white" id="generator">
+      <div className="max-w-7xl mx-auto px-4">
+        {/* Título + Data do concurso */}
+        <div className="text-center mb-12">
+          <h2 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 mb-4">
+            Gerador de Desdobramentos
+          </h2>
+          {ultimoConcurso && (
+            <div className="inline-block bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-4 rounded-full text-xl font-bold shadow-2xl">
+              <Trophy className="inline w-8 h-8 mr-3" />
+              Baseado no Concurso {ultimoConcurso} — {dataSorteio}
+            </div>
+          )}
         </div>
 
-        {/* Concurso usado */}
-        {ultimoConcurso && (
-          <div className="max-w-md mx-auto mb-8 bg-gradient-to-r from-blue-600 to-purple-600 text-white p-5 rounded-2xl shadow-xl text-center">
-            <Trophy className="w-8 h-8 mx-auto mb-2" />
-            <p className="text-sm opacity-90">Baseado no</p>
-            <p className="text-2xl font-bold">Concurso {ultimoConcurso}</p>
-            <p className="text-sm">{dataSorteio} • Dados oficiais Caixa</p>
-          </div>
-        )}
-
-        {/* Fixos do dia */}
+        {/* Fixos */}
         {fixos.length > 0 && (
-          <div className="text-center mb-10">
-            <p className="text-sm text-gray-600 mb-3">Números Fixos (mais sorteados recentemente)</p>
-            <div className="flex justify-center gap-4 flex-wrap">
+          <div className="text-center mb-12">
+            <p className="text-2xl font-bold text-gray-800 mb-6">Números Fixos (mais sorteados)</p>
+            <div className="flex justify-center gap-6 flex-wrap">
               {fixos.map(n => (
-                <div key={n} className="w-16 h-16 bg-gradient-to-br from-yellow-500 to-orange-600 text-white rounded-full flex items-center justify-center text-2xl font-extrabold shadow-lg ring-4 ring-yellow-300">
+                <div key={n} className="w-20 h-20 bg-gradient-to-br from-yellow-500 to-orange-600 text-white rounded-full flex items-center justify-center text-4xl font-black shadow-2xl ring-8 ring-yellow-300">
                   {n.toString().padStart(2, '0')}
                 </div>
               ))}
@@ -128,14 +124,14 @@ export function Generator() {
         )}
 
         {/* Botões */}
-        <div className="flex justify-center gap-6 mb-12">
+        <div className="flex justify-center gap-8 mb-16">
           {apostas.length > 0 && (
-            <div className="bg-white rounded-xl shadow-md p-2">
-              <button onClick={() => setViewMode('balls')} className={`p-3 rounded-lg ${viewMode === 'balls' ? 'bg-purple-600 text-white' : 'text-gray-600'}`}>
-                <List className="w-6 h-6" />
+            <div className="bg-white rounded-2xl shadow-xl p-3">
+              <button onClick={() => setViewMode('balls')} className={`p-4 rounded-xl ${viewMode === 'balls' ? 'bg-purple-600 text-white' : 'text-gray-600'}`}>
+                <List className="w-8 h-8" />
               </button>
-              <button onClick={() => setViewMode('ticket')} className={`p-3 rounded-lg ${viewMode === 'ticket' ? 'bg-purple-600 text-white' : 'text-gray-600'}`}>
-                <Grid3X3 className="w-6 h-6" />
+              <button onClick={() => setViewMode('ticket')} className={`p-4 rounded-xl ${viewMode === 'ticket' ? 'bg-purple-600 text-white' : 'text-gray-600'}`}>
+                <Grid3X3 className="w-8 h-8" />
               </button>
             </div>
           )}
@@ -143,18 +139,18 @@ export function Generator() {
           <button
             onClick={handleGenerate}
             disabled={isGenerating}
-            className={`px-10 py-5 rounded-2xl font-bold text-xl shadow-2xl transition-all transform hover:scale-105 flex items-center gap-3 ${
+            className={`px-12 py-6 rounded-3xl font-black text-2xl shadow-2xl transition-all transform hover:scale-110 flex items-center gap-4 ${
               isGenerating ? 'bg-gray-400' : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
             }`}
           >
             {isGenerating ? (
               <>
-                <RefreshCw className="w-7 h-7 animate-spin" />
+                <RefreshCw className="w-10 h-10 animate-spin" />
                 Gerando...
               </>
             ) : (
               <>
-                <Wand2 className="w-7 h-7" />
+                <Wand2 className="w-10 h-10" />
                 {isVip ? 'Gerar Novos Palpites' : 'Ver Palpites do Dia'}
               </>
             )}
@@ -162,7 +158,7 @@ export function Generator() {
         </div>
 
         {/* Apostas */}
-        <div className={viewMode === 'ticket' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" : "space-y-8"}>
+        <div className={viewMode === 'ticket' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12" : "space-y-12"}>
           <AnimatePresence mode="wait">
             {apostas.map((aposta, i) => (
               <motion.div
@@ -170,35 +166,35 @@ export function Generator() {
                 initial={{ opacity: 0, y: 50 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1 }}
-                className="bg-white rounded-3xl p-8 shadow-2xl border border-gray-100 hover:shadow-3xl transition-all"
+                className="bg-white rounded-3xl p-10 shadow-2xl border-4 border-purple-100 hover:border-purple-400 transition-all"
               >
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-2xl font-bold text-purple-700">
-                    Aposta {i + 1} {i >= 5 && '(Modo Grok)'}
+                <div className="flex justify-between items-center mb-8">
+                  <h3 className="text-3xl font-black text-purple-700">
+                    Aposta {i + 1} — {aposta.estrategia}
                   </h3>
                   {isVip && (
                     <button
                       onClick={() => saveGame(aposta)}
                       disabled={savedGames.includes(aposta.id)}
-                      className={`p-3 rounded-full transition-all ${
+                      className={`p-4 rounded-full transition-all ${
                         savedGames.includes(aposta.id)
                           ? 'bg-green-100 text-green-600'
                           : 'hover:bg-gray-100 text-gray-500'
                       }`}
                     >
-                      {savedGames.includes(aposta.id) ? <CheckCircle className="w-6 h-6" /> : <Save className="w-6 h-6" />}
+                      {savedGames.includes(aposta.id) ? <CheckCircle className="w-8 h-8" /> : <Save className="w-8 h-8" />}
                     </button>
                   )}
                 </div>
 
                 {viewMode === 'balls' ? (
-                  <div className="flex flex-wrap gap-4 justify-center">
+                  <div className="flex flex-wrap gap-5 justify-center">
                     {aposta.numbers.map(num => (
                       <LotteryBall
                         key={num}
                         number={num}
                         isFixed={fixos.includes(num)}
-                        className={fixos.includes(num) ? 'ring-4 ring-yellow-400 scale-110' : ''}
+                        className={fixos.includes(num) ? 'ring-8 ring-yellow-400 scale-125' : ''}
                       />
                     ))}
                   </div>
@@ -209,17 +205,6 @@ export function Generator() {
             ))}
           </AnimatePresence>
         </div>
-
-        {!isVip && apostas.length > 0 && (
-          <div className="text-center mt-12 bg-gradient-to-r from-purple-600 to-pink-600 text-white p-8 rounded-3xl">
-            <Lock className="w-12 h-12 mx-auto mb-4" />
-            <h3 className="text-2xl font-bold mb-3">Quer palpites novos todo dia?</h3>
-            <p className="text-lg mb-6">Torne-se VIP e gere palpites ilimitados com estratégias exclusivas!</p>
-            <Link to="/vip" className="bg-white text-purple-600 px-8 py-4 rounded-xl font-bold text-xl hover:bg-gray-100 transition">
-              Virar VIP Agora
-            </Link>
-          </div>
-        )}
       </div>
     </section>
   )
