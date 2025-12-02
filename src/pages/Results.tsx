@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Calendar, Trophy, DollarSign, Loader2 } from 'lucide-react'
 import { LotteryBall } from '../components/LotteryBall'
 import { toast } from 'sonner'
+import { Calendar, Trophy, DollarSign, Loader2, AlertCircle } from 'lucide-react'
 
 interface Faixa {
   faixa: string
