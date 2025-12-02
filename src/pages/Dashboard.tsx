@@ -1,164 +1,145 @@
-import React, { useEffect, useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../lib/supabase';
-import { TicketView } from '../components/TicketView';
-import { TrendingUp, DollarSign, Calendar, CheckCircle, Loader2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react'
+import { Trophy, TrendingUp, DollarSign, Calendar, Loader2, CheckSquare } from 'lucide-react'
+import { useAuth } from '../contexts/AuthContext'
+import { supabase } from '../lib/supabase'
+import { toast } from 'sonner'
 
-interface SavedGame {
-  id: number;
-  created_at: string;
-  numbers: number[];
-  played: boolean;
-  prize_amount: number;
+interface JogoSalvo {
+  id: string
+  numbers: number[]
+  created_at: string
 }
 
 export function Dashboard() {
-  const { user, isVip } = useAuth();
-  const [games, setGames] = useState<SavedGame[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { user, isVip } = useAuth()
+  const [jogos, setJogos] = useState<JogoSalvo[]>([])
+  const [loading, setLoading] = useState(true)
+  const [conferindo, setConferindo] = useState(false)
+  const [resultadoConferencia, setResultadoConferencia] = useState<any>(null)
+
+  const BACKEND_URL = 'https://palpiteiro-v2-backend.vercel.app'
 
   useEffect(() => {
-    if (user) fetchGames();
-  }, [user]);
-
-  async function fetchGames() {
-    try {
-      // CORREÇÃO: Removido 'error' que não estava sendo usado
-      const { data } = await supabase
-        .from('saved_games')
-        .select('*')
-        .eq('user_id', user?.id)
-        .order('created_at', { ascending: false });
-
-      if (data) setGames(data);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
+    if (!user || !isVip) {
+      setLoading(false)
+      return
     }
-  }
 
-  async function togglePlayed(id: number, currentStatus: boolean) {
-    const { error } = await supabase
-      .from('saved_games')
-      .update({ played: !currentStatus })
-      .eq('id', id);
-    
-    if (!error) fetchGames();
-  }
+    async function carregar() {
+      try {
+        const { data: jogosDb } = await supabase
+          .from('saved_games')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
 
-  async function updatePrize(id: number, amount: string) {
-    const val = parseFloat(amount);
-    if (isNaN(val)) return;
+        setJogos(jogosDb || [])
+      } catch {
+        toast.error('Erro ao carregar jogos salvos')
+      } finally {
+        setLoading(false)
+      }
+    }
+    carregar()
+  }, [user, isVip])
 
-    const { error } = await supabase
-      .from('saved_games')
-      .update({ prize_amount: val })
-      .eq('id', id);
-    
-    if (!error) fetchGames();
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen pt-32 flex justify-center items-start">
-        <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-8 h-8 text-primary-600 animate-spin" />
-          <p className="text-gray-500">Carregando seus jogos...</p>
-        </div>
-      </div>
-    );
+  const conferirJogo = async (concurso: number, jogo: number[]) => {
+    setConferindo(true)
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/conferir-jogo`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ concurso, meu_jogo: jogo })
+      })
+      const data = await res.json()
+      setResultadoConferencia(data)
+      toast.success(`Você acertou ${data.acertos} números! Faixa: ${data.faixa}`)
+    } catch {
+      toast.error('Erro ao conferir jogo')
+    } finally {
+      setConferindo(false)
+    }
   }
 
   if (!isVip) {
     return (
-      <div className="pt-32 pb-20 px-4 text-center">
-        <h2 className="text-2xl font-bold mb-4">Área Exclusiva VIP</h2>
-        <p className="mb-6">Faça upgrade para acessar seu painel de investimentos.</p>
-        <Link to="/vip" className="bg-purple-600 text-white px-6 py-2 rounded-lg">Ver Planos</Link>
+      <div className="pt-32 text-center">
+        <h2 className="text-4xl font-bold mb-6">Área Exclusiva VIP</h2>
+        <p className="text-xl mb-8 text-gray-600">Faça upgrade para ver seu desempenho real</p>
+        <Link to="/vip" className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-12 py-6 rounded-full text-2xl font-bold shadow-2xl hover:scale-105 transition">
+          Virar VIP Agora
+        </Link>
       </div>
-    );
+    )
   }
 
-  const totalInvested = games.filter(g => g.played).length * 3.00;
-  const totalWon = games.reduce((acc, curr) => acc + (curr.prize_amount || 0), 0);
-  const profit = totalWon - totalInvested;
+  if (loading) {
+    return (
+      <div className="pt-32 text-center">
+        <Loader2 className="w-16 h-16 animate-spin text-purple-600" />
+        <p className="mt-6 text-2xl text-gray-600">Carregando seu Dashboard VIP...</p>
+      </div>
+    )
+  }
 
   return (
-    <div className="pt-24 pb-20 bg-gray-50 min-h-screen">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Meu Painel de Apostas</h1>
+    <div className="pt-20 pb-16 bg-gradient-to-b from-purple-50 to-white min-h-screen">
+      <div className="max-w-7xl mx-auto px-4">
+        <h1 className="text-5xl font-black text-center mb-12 text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
+          Dashboard VIP
+        </h1>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 bg-blue-50 rounded-lg"><DollarSign className="w-5 h-5 text-blue-600" /></div>
-              <span className="text-gray-600 font-medium">Total Investido</span>
+        {/* Seus jogos salvos */}
+        <div className="bg-white rounded-3xl shadow-2xl p-10 mb-16">
+          <h3 className="text-3xl font-bold mb-8 text-purple-800">Seus Jogos Salvos</h3>
+          {jogos.length === 0 ? (
+            <p className="text-center text-gray-600">Você ainda não salvou nenhum jogo</p>
+          ) : (
+            <div className="space-y-8">
+              {jogos.map((jogo) => (
+                <div key={jogo.id} className="bg-gray-50 rounded-2xl p-6 shadow-lg">
+                  <div className="flex justify-between items-center mb-4">
+                    <p className="text-lg font-medium text-gray-700">
+                      Salvo em {new Date(jogo.created_at).toLocaleDateString('pt-BR')}
+                    </p>
+                    <button
+                      onClick={() => conferirJogo(3551, jogo.numbers)}
+                      disabled={conferindo}
+                      className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-6 py-3 rounded-full font-bold shadow-lg hover:scale-105 transition flex items-center gap-2"
+                    >
+                      <CheckSquare className="w-5 h-5" />
+                      Conferir Acertos
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-3">
+                    {jogo.numbers.map(num => (
+                      <div key={num} className="w-12 h-12 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold">
+                        {num.toString().padStart(2, '0')}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
-            <p className="text-2xl font-bold text-gray-900">R$ {totalInvested.toFixed(2)}</p>
-            <p className="text-xs text-gray-400 mt-1">Considerando R$ 3,00 por aposta</p>
-          </div>
-
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 bg-green-50 rounded-lg"><TrendingUp className="w-5 h-5 text-green-600" /></div>
-              <span className="text-gray-600 font-medium">Total Ganho</span>
-            </div>
-            <p className="text-2xl font-bold text-green-600">R$ {totalWon.toFixed(2)}</p>
-          </div>
-
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 bg-purple-50 rounded-lg"><CheckCircle className="w-5 h-5 text-purple-600" /></div>
-              <span className="text-gray-600 font-medium">Lucro/Prejuízo</span>
-            </div>
-            <p className={`text-2xl font-bold ${profit >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-              R$ {profit.toFixed(2)}
-            </p>
-          </div>
+          )}
         </div>
 
-        <h2 className="text-xl font-bold text-gray-900 mb-6">Histórico de Jogos Salvos</h2>
-        
-        {games.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-xl border border-gray-100">
-            <p className="text-gray-500 mb-4">Nenhum jogo salvo ainda.</p>
-            <Link to="/" className="text-primary-600 font-bold hover:underline">Gerar novos palpites</Link>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {games.map(game => (
-              <div key={game.id} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                <div className="flex justify-between items-center mb-4 text-sm text-gray-500">
-                  <span className="flex items-center gap-1"><Calendar className="w-4 h-4" /> {new Date(game.created_at).toLocaleDateString()}</span>
-                  <button 
-                    onClick={() => togglePlayed(game.id, game.played)}
-                    className={`px-3 py-1 rounded-full text-xs font-bold ${game.played ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}
-                  >
-                    {game.played ? 'Apostado' : 'Não Apostado'}
-                  </button>
-                </div>
-                
-                <TicketView selectedNumbers={game.numbers} className="mb-4 scale-90 origin-top" />
-                
-                {game.played && (
-                  <div className="mt-2 pt-3 border-t border-gray-100">
-                    <label className="text-xs text-gray-500 block mb-1">Prêmio Recebido (R$)</label>
-                    <input 
-                      type="number" 
-                      placeholder="0.00"
-                      defaultValue={game.prize_amount}
-                      onBlur={(e) => updatePrize(game.id, e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                    />
-                  </div>
-                )}
-              </div>
-            ))}
+        {/* Resultado da conferência */}
+        {resultadoConferencia && (
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-3xl shadow-2xl p-12 text-center mb-16">
+            <Trophy className="w-20 h-20 mx-auto mb-6 text-yellow-500" />
+            <h3 className="text-4xl font-black text-green-800 mb-4">
+              Você acertou {resultadoConferencia.acertos} números!
+            </h3>
+            <p className="text-3xl font-bold text-green-700 mb-6">
+              Faixa: {resultadoConferencia.faixa}
+            </p>
+            <p className="text-2xl text-gray-800">
+              Prêmio estimado: <strong className="text-green-600">{resultadoConferencia.premio}</strong>
+            </p>
           </div>
         )}
       </div>
     </div>
-  );
+  )
 }
