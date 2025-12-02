@@ -1,19 +1,12 @@
 import { useState, useEffect } from 'react'
-import { Calendar, Trophy, DollarSign, Loader2, MapPin, AlertCircle } from 'lucide-react'
+import { Calendar, Trophy, DollarSign, Loader2, TrendingUp } from 'lucide-react'
 import { LotteryBall } from '../components/LotteryBall'
-import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 
 interface Faixa {
   faixa: string
   ganhadores: number
   premio: string
-}
-
-interface CidadePremiada {
-  cidade: string
-  uf: string
-  ganhadores: number
 }
 
 interface Resultado {
@@ -24,7 +17,6 @@ interface Resultado {
   arrecadacao: string
   estimativa_proximo: string
   acumulou: boolean
-  cidades_premiadas: CidadePremiada[]
   acumulado_especial?: string
   observacao?: string
   data_referencia: string
@@ -69,7 +61,7 @@ export function Results() {
   }
 
   const isAcumulou = resultado.acumulou
-  const cidades = resultado.cidades_premiadas || []
+  const acumuladoEspecial = resultado.acumulado_especial && resultado.acumulado_especial !== 'R$0,00' && resultado.acumulado_especial !== '0,00'
 
   return (
     <div className="min-h-screen bg-white pt-20">
@@ -95,16 +87,27 @@ export function Results() {
           </div>
         </div>
 
-        {/* ACUMULOU! ou Estimativa */}
+        {/* ACUMULOU! + Estimativa */}
         {isAcumulou ? (
           <div className="bg-red-100 border-2 border-red-300 rounded-2xl p-8 mb-12 text-center">
-            <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-4" />
             <div className="bg-red-600 text-white px-12 py-6 rounded-full text-4xl font-black shadow-2xl">
               ACUMULOU!
             </div>
-            <p className="text-3xl font-bold text-red-700 mt-6">
-              {resultado.estimativa_proximo}
-            </p>
+            {acumuladoEspecial ? (
+              <div className="mt-8">
+                <p className="text-3xl font-bold text-red-700">
+                  {resultado.acumulado_especial}
+                </p>
+                <p className="text-xl text-gray-700 mt-2">Acumulado Independência</p>
+              </div>
+            ) : (
+              <div className="mt-8">
+                <p className="text-3xl font-bold text-red-700">
+                  {resultado.estimativa_proximo}
+                </p>
+                <p className="text-xl text-gray-700 mt-2">Próximo concurso</p>
+              </div>
+            )}
           </div>
         ) : (
           <div className="bg-green-100 border-2 border-green-300 rounded-2xl p-8 mb-12 text-center">
@@ -144,28 +147,6 @@ export function Results() {
           </table>
         </div>
 
-        {/* Cidades Premiadas */}
-        {cidades.length > 0 && (
-          <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-3xl shadow-2xl p-12 mb-16">
-            <div className="flex items-center justify-center gap-4 mb-10">
-              <MapPin className="w-14 h-14 text-orange-600" />
-              <h3 className="text-4xl font-black text-orange-800">Cidades Premiadas - 15 Acertos</h3>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {cidades.map((cidade, i) => (
-                <div key={i} className="bg-white rounded-3xl p-10 shadow-2xl border-4 border-orange-200 text-center">
-                  <p className="text-3xl font-black text-orange-700 mb-4">
-                    {cidade.cidade.toUpperCase()}/{cidade.uf}
-                  </p>
-                  <p className="text-xl text-gray-700">
-                    {cidade.ganhadores} ganhador{cidade.ganhadores > 1 ? 'es' : ''}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Informações Adicionais */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-center">
           <div className="bg-gray-100 rounded-2xl p-8">
@@ -178,14 +159,12 @@ export function Results() {
           </div>
         </div>
 
-        {/* Acumulado Especial / Observação */}
-        {(resultado.acumulado_especial && resultado.acumulado_especial !== 'R$0,00') || resultado.observacao ? (
-          <div className="bg-yellow-50 border-2 border-yellow-300 rounded-2xl p-8 mt-12 text-center">
-            <p className="text-2xl font-bold text-yellow-800">
-              {resultado.observacao || `Acumulado Especial: ${resultado.acumulado_especial}`}
-            </p>
+        {/* Observação (ex: sorteio especial) */}
+        {resultado.observacao && (
+          <div className="text-center mt-16">
+            <p className="text-xl font-bold text-purple-700">{resultado.observacao}</p>
           </div>
-        ) : null}
+        )}
 
         <div className="text-center text-gray-600 text-base mt-20">
           <p>Dados oficiais da Caixa Econômica Federal</p>
