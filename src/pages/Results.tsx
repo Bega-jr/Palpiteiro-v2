@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Calendar, Trophy, DollarSign, Loader2, TrendingUp } from 'lucide-react'
+import { Calendar, Trophy, DollarSign, Loader2 } from 'lucide-react'
 import { LotteryBall } from '../components/LotteryBall'
 import { toast } from 'sonner'
 
@@ -55,17 +55,17 @@ export function Results() {
   if (!resultado || resultado.erro) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-2xl text-red-600">Erro ao carregar. Tente novamente.</p>
+        <p className="text-xl text-red-600">Erro ao carregar. Tente novamente.</p>
       </div>
     )
   }
 
   const isAcumulou = resultado.acumulou
-  const acumuladoEspecial = resultado.acumulado_especial && resultado.acumulado_especial !== 'R$0,00' && resultado.acumulado_especial !== '0,00'
+  const temAcumuladoEspecial = resultado.acumulado_especial && resultado.acumulado_especial !== 'R$0,00'
 
   return (
     <div className="min-h-screen bg-white pt-20">
-      <div className="max-w-4xl mx-auto px-4">
+      <div className="max-w-5xl mx-auto px-4">
         {/* Concurso e Data */}
         <div className="text-center mb-12">
           <h1 className="text-5xl font-bold text-gray-900 mb-2">
@@ -87,18 +87,18 @@ export function Results() {
           </div>
         </div>
 
-        {/* ACUMULOU! + Estimativa */}
+        {/* ACUMULOU! ou Estimativa */}
         {isAcumulou ? (
           <div className="bg-red-100 border-2 border-red-300 rounded-2xl p-8 mb-12 text-center">
             <div className="bg-red-600 text-white px-12 py-6 rounded-full text-4xl font-black shadow-2xl">
               ACUMULOU!
             </div>
-            {acumuladoEspecial ? (
+            {temAcumuladoEspecial ? (
               <div className="mt-8">
                 <p className="text-3xl font-bold text-red-700">
                   {resultado.acumulado_especial}
                 </p>
-                <p className="text-xl text-gray-700 mt-2">Acumulado Independência</p>
+                <p className="text-xl text-gray-700 mt-2">Sorteio Especial da Independência</p>
               </div>
             ) : (
               <div className="mt-8">
@@ -118,27 +118,27 @@ export function Results() {
           </div>
         )}
 
-        {/* Tabela de Premiação */}
-        <div className="bg-white rounded-2xl shadow-lg p-8 mb-12">
+        {/* Tabela de Premiação — RESPONSIVA E LIMPA */}
+        <div className="bg-white rounded-2xl shadow-lg p-8 mb-12 overflow-x-auto">
           <h3 className="text-xl font-bold text-center mb-6 text-gray-800">Premiação por Faixa</h3>
-          <table className="w-full text-left border-collapse">
+          <table className="w-full min-w-[600px] text-left border-collapse">
             <thead>
               <tr className="bg-gray-100 border-b-2 border-gray-300">
-                <th className="px-6 py-4 text-lg font-bold text-gray-700">Faixa</th>
-                <th className="px-6 py-4 text-lg font-bold text-center text-gray-700">Ganhadores</th>
-                <th className="px-6 py-4 text-lg font-bold text-right text-gray-700">Prêmio</th>
+                <th className="px-4 py-3 text-base md:text-lg font-bold text-gray-700">Faixa</th>
+                <th className="px-4 py-3 text-base md:text-lg font-bold text-center text-gray-700">Ganhadores</th>
+                <th className="px-4 py-3 text-base md:text-lg font-bold text-right text-gray-700">Prêmio</th>
               </tr>
             </thead>
             <tbody>
               {resultado.ganhadores.map((faixa, i) => (
                 <tr key={i} className="border-b border-gray-200 hover:bg-gray-50">
-                  <td className="px-6 py-4 text-lg font-semibold text-gray-900">
+                  <td className="px-4 py-4 text-base md:text-lg font-semibold text-gray-900">
                     {faixa.faixa}
                   </td>
-                  <td className="px-6 py-4 text-lg font-semibold text-center text-gray-900">
+                  <td className="px-4 py-4 text-base md:text-lg font-semibold text-center text-gray-900">
                     {faixa.ganhadores > 0 ? faixa.ganhadores.toLocaleString('pt-BR') : '-'}
                   </td>
-                  <td className="px-6 py-4 text-lg font-semibold text-right text-green-700">
+                  <td className="px-4 py-4 text-base md:text-lg font-semibold text-right text-green-700">
                     {faixa.premio}
                   </td>
                 </tr>
@@ -147,8 +147,8 @@ export function Results() {
           </table>
         </div>
 
-        {/* Informações Adicionais */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-center">
+        {/* Arrecadação e Estimativa */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-center mb-16">
           <div className="bg-gray-100 rounded-2xl p-8">
             <p className="text-lg font-bold text-gray-700">Arrecadação Total</p>
             <p className="text-3xl font-black text-gray-900 mt-4">{resultado.arrecadacao}</p>
@@ -158,13 +158,6 @@ export function Results() {
             <p className="text-3xl font-black text-green-600 mt-4">{resultado.estimativa_proximo}</p>
           </div>
         </div>
-
-        {/* Observação (ex: sorteio especial) */}
-        {resultado.observacao && (
-          <div className="text-center mt-16">
-            <p className="text-xl font-bold text-purple-700">{resultado.observacao}</p>
-          </div>
-        )}
 
         <div className="text-center text-gray-600 text-base mt-20">
           <p>Dados oficiais da Caixa Econômica Federal</p>
