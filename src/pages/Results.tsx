@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Calendar, Trophy, DollarSign, Loader2 } from 'lucide-react'
+import { Calendar, Trophy, DollarSign, Loader2, AlertCircle } from 'lucide-react'
 import { LotteryBall } from '../components/LotteryBall'
 import { toast } from 'sonner'
 
@@ -14,9 +14,11 @@ interface Resultado {
   data_ultimo: string
   ultimos_numeros: number[]
   ganhadores: Faixa[]
-  arrecadacao: string
+  arrecadacao_total: string
   estimativa_proximo: string
   acumulou: boolean
+  acumulado_especial?: string
+  observacao?: string
   data_referencia: string
 }
 
@@ -60,6 +62,8 @@ export function Results() {
     )
   }
 
+  const isAcumulou = resultado.acumulou
+
   return (
     <div className="min-h-screen bg-white pt-20">
       <div className="max-w-4xl mx-auto px-4">
@@ -85,8 +89,9 @@ export function Results() {
         </div>
 
         {/* ACUMULOU! ou Estimativa */}
-        {resultado.acumulou ? (
+        {isAcumulou ? (
           <div className="bg-red-100 border-2 border-red-300 rounded-2xl p-8 mb-12 text-center">
+            <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-4" />
             <div className="bg-red-600 text-white px-12 py-6 rounded-full text-4xl font-black shadow-2xl">
               ACUMULOU!
             </div>
@@ -132,14 +137,28 @@ export function Results() {
           </table>
         </div>
 
-        {/* Arrecadação */}
-        <div className="text-center">
-          <p className="text-lg text-gray-600">
-            Arrecadação Total: <strong>{resultado.arrecadacao}</strong>
-          </p>
+        {/* Informações Adicionais */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-center">
+          <div className="bg-gray-100 rounded-2xl p-8">
+            <p className="text-lg font-bold text-gray-700">Arrecadação Total</p>
+            <p className="text-3xl font-black text-gray-900 mt-4">{resultado.arrecadacao_total}</p>
+          </div>
+          <div className="bg-gray-100 rounded-2xl p-8">
+            <p className="text-lg font-bold text-gray-700">Estimativa Próximo</p>
+            <p className="text-3xl font-black text-green-600 mt-4">{resultado.estimativa_proximo}</p>
+          </div>
         </div>
 
-        <div className="text-center text-gray-500 text-base mt-20">
+        {/* Acumulado Especial / Observação */}
+        {(resultado.acumulado_especial && resultado.acumulado_especial !== 'R$0,00') || resultado.observacao ? (
+          <div className="bg-yellow-50 border-2 border-yellow-300 rounded-2xl p-8 mt-12 text-center">
+            <p className="text-2xl font-bold text-yellow-800">
+              {resultado.observacao || `Acumulado Especial: ${resultado.acumulado_especial}`}
+            </p>
+          </div>
+        ) : null}
+
+        <div className="text-center text-gray-600 text-base mt-20">
           <p>Dados oficiais da Caixa Econômica Federal</p>
           <p>Palpiteiro V2 © 2025</p>
         </div>
