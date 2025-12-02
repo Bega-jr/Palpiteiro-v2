@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Calendar, Trophy, Users, DollarSign, Loader2, MapPin } from 'lucide-react'
+import { Calendar, Trophy, Users, DollarSign, Loader2 } from 'lucide-react'
 import { LotteryBall } from '../components/LotteryBall'
 import { toast } from 'sonner'
 
@@ -7,7 +7,6 @@ interface Faixa {
   faixa: string
   ganhadores: number
   premio: string
-  cidades?: { cidade: string; uf: string; ganhadores: number }[]
 }
 
 interface Resultado {
@@ -62,8 +61,6 @@ export function Results() {
     )
   }
 
-  const cidadesPremiadas = resultado.ganhadores[0]?.cidades || []
-
   return (
     <div className="pt-20 pb-24 min-h-screen bg-gradient-to-b from-purple-50 to-white">
       <div className="max-w-6xl mx-auto px-4">
@@ -102,66 +99,37 @@ export function Results() {
           </div>
         </div>
 
-        {/* Premiação Completa */}
-        <div className="bg-white rounded-3xl shadow-2xl p-12 mb-16">
-          <h3 className="text-4xl font-bold text-center mb-12 text-purple-800">Premiação Completa</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-8">
-            {resultado.ganhadores.map((faixa, i) => (
-              <div key={i} className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-3xl p-8 border-4 border-purple-200 shadow-xl text-center">
-                <p className="text-5xl font-black text-purple-700 mb-4">{faixa.faixa}</p>
-                <div className="space-y-6">
-                  <div>
-                    <p className="text-lg font-bold text-gray-800 flex items-center justify-center gap-3">
-                      <Users className="w-7 h-7" /> Ganhadores
-                    </p>
-                    <p className="text-3xl font-black text-purple-800">
-                      {faixa.ganhadores > 0 ? faixa.ganhadores : '-'}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-lg font-bold text-gray-800 flex items-center justify-center gap-3">
-                      <DollarSign className="w-7 h-7" /> Prêmio
-                    </p>
-                    <p className="text-2xl font-black text-green-600">
-                      {faixa.premio}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+        {/* Tabela de Premiação Completa */}
+        <div className="bg-white rounded-3xl shadow-2xl p-10 mb-16 overflow-x-auto">
+          <h3 className="text-4xl font-bold text-center mb-10 text-purple-800">Premiação Completa</h3>
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-gradient-to-r from-purple-600 to-pink-600 text-white">
+                <th className="px-8 py-5 text-xl font-bold rounded-tl-2xl">Faixa</th>
+                <th className="px-8 py-5 text-xl font-bold text-center">Ganhadores</th>
+                <th className="px-8 py-5 text-xl font-bold text-right rounded-tr-2xl">Prêmio</th>
+              </tr>
+            </thead>
+            <tbody>
+              {resultado.ganhadores.map((faixa, i) => (
+                <tr key={i} className={`border-b-4 ${i % 2 === 0 ? 'bg-purple-50' : 'bg-pink-50'}`}>
+                  <td className="px-8 py-6 text-2xl font-black text-purple-800">
+                    {faixa.faixa}
+                  </td>
+                  <td className="px-8 py-6 text-2xl font-bold text-center text-gray-800">
+                    {faixa.ganhadores > 0 ? faixa.ganhadores.toLocaleString('pt-BR') : '-'}
+                  </td>
+                  <td className="px-8 py-6 text-2xl font-bold text-right text-green-600">
+                    {faixa.premio}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
 
-        {/* Cidades Premiadas (15 acertos) */}
-        {cidadesPremiadas.length > 0 ? (
-          <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-3xl shadow-2xl p-12 mb-16">
-            <div className="flex items-center justify-center gap-4 mb-10">
-              <MapPin className="w-14 h-14 text-orange-600" />
-              <h3 className="text-5xl font-black text-orange-800">Cidades Premiadas - 15 Acertos</h3>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {cidadesPremiadas.map((cidade, i) => (
-                <div key={i} className="bg-white rounded-3xl p-10 shadow-2xl border-4 border-orange-200 text-center">
-                  <p className="text-4xl font-black text-orange-700 mb-4">
-                    {cidade.cidade.toUpperCase()}/{cidade.uf}
-                  </p>
-                  <p className="text-2xl text-gray-700">
-                    {cidade.ganhadores} ganhador{cidade.ganhadores > 1 ? 'es' : ''}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className="bg-gradient-to-br from-gray-100 to-gray-200 rounded-3xl shadow-2xl p-12 mb-16 text-center">
-            <Trophy className="w-20 h-20 mx-auto mb-6 text-yellow-500" />
-            <h3 className="text-4xl font-black text-gray-800 mb-4">Nenhum ganhador de 15 acertos</h3>
-            <p className="text-2xl text-gray-600">O prêmio acumulou para o próximo concurso!</p>
-          </div>
-        )}
-
         {/* Informações Adicionais */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-10 text-center">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-10 text-center mb-16">
           <div className="bg-gradient-to-br from-purple-100 to-pink-100 rounded-3xl p-10 shadow-2xl">
             <p className="text-2xl font-bold text-gray-800">Arrecadação Total</p>
             <p className="text-4xl font-black text-purple-700 mt-4">{resultado.arrecadacao}</p>

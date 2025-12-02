@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Wand2, RefreshCw, Grid3X3, List, Save, CheckCircle, Trophy } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { LotteryBall } from './LotteryBall'
@@ -26,25 +26,15 @@ export function Generator() {
 
   const BACKEND_URL = 'https://palpiteiro-v2-backend.vercel.app'
 
-  const [cacheDia, setCacheDia] = useState<string>('')
-
   const handleGenerate = async () => {
     setIsGenerating(true)
 
     try {
-      const hoje = new Date().toISOString().split('T')[0]
-
-      if (!isVip && cacheDia === hoje && apostas.length > 0) {
-        toast.info('Palpites fixos do dia já exibidos! Torne-se VIP para gerar novos.')
-        setIsGenerating(false)
-        return
-      }
-
       const response = await fetch(`${BACKEND_URL}/api/palpites`)
       const data = await response.json()
 
       if (data.apostas && Array.isArray(data.apostas)) {
-        const estrategias = ['Quentes', 'Frios', 'Equilibrado', 'Final 0', 'Padrão', 'Modo Grok', 'Surpresa']
+        const estrategias = ['Quentes + Fixos', 'Frios + Balanceado', 'Equilíbrio Total', 'Final 0', 'Padrão Caixa', 'Modo Grok', 'Surpresa Máxima']
         const novosJogos: Aposta[] = data.apostas.map((nums: number[], i: number) => ({
           id: i + 1,
           numbers: nums,
@@ -59,8 +49,8 @@ export function Generator() {
         setApostas(novosJogos)
         setFixos(data.fixos || [])
         setUltimoConcurso(data.ultimo_concurso || 'Atual')
-        setDataSorteio(data.data_ultimo || hoje)
-        setCacheDia(hoje)
+        setDataSorteio(data.data_ultimo || new Date().toLocaleDateString('pt-BR'))
+        toast.success('7 palpites gerados com sucesso!')
       } else {
         toast.error('Erro ao gerar palpites')
       }
@@ -88,10 +78,6 @@ export function Generator() {
       toast.error('Erro ao salvar jogo')
     }
   }
-
-  useEffect(() => {
-    handleGenerate()
-  }, [])
 
   return (
     <section className="py-16 bg-gradient-to-b from-purple-50 to-white" id="generator">
@@ -123,88 +109,92 @@ export function Generator() {
           </div>
         )}
 
-        {/* Botões */}
-        <div className="flex justify-center gap-8 mb-16">
-          {apostas.length > 0 && (
-            <div className="bg-white rounded-2xl shadow-xl p-3">
-              <button onClick={() => setViewMode('balls')} className={`p-4 rounded-xl ${viewMode === 'balls' ? 'bg-purple-600 text-white' : 'text-gray-600'}`}>
-                <List className="w-8 h-8" />
-              </button>
-              <button onClick={() => setViewMode('ticket')} className={`p-4 rounded-xl ${viewMode === 'ticket' ? 'bg-purple-600 text-white' : 'text-gray-600'}`}>
-                <Grid3X3 className="w-8 h-8" />
-              </button>
-            </div>
-          )}
-
+        {/* Botão Gerar */}
+        <div className="text-center mb-16">
           <button
             onClick={handleGenerate}
             disabled={isGenerating}
-            className={`px-12 py-6 rounded-3xl font-black text-2xl shadow-2xl transition-all transform hover:scale-110 flex items-center gap-4 ${
+            className={`px-16 py-8 rounded-3xl font-black text-3xl shadow-2xl transition-all transform hover:scale-110 flex items-center gap-6 mx-auto ${
               isGenerating ? 'bg-gray-400' : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white'
             }`}
           >
             {isGenerating ? (
               <>
-                <RefreshCw className="w-10 h-10 animate-spin" />
-                Gerando...
+                <RefreshCw className="w-12 h-12 animate-spin" />
+                Gerando com IA...
               </>
             ) : (
               <>
-                <Wand2 className="w-10 h-10" />
-                {isVip ? 'Gerar Novos Palpites' : 'Ver Palpites do Dia'}
+                <Wand2 className="w-12 h-12" />
+                Gerar 7 Palpites Inteligentes
               </>
             )}
           </button>
         </div>
 
         {/* Apostas */}
-        <div className={viewMode === 'ticket' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12" : "space-y-12"}>
-          <AnimatePresence mode="wait">
-            {apostas.map((aposta, i) => (
-              <motion.div
-                key={aposta.id}
-                initial={{ opacity: 0, y: 50 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.1 }}
-                className="bg-white rounded-3xl p-10 shadow-2xl border-4 border-purple-100 hover:border-purple-400 transition-all"
-              >
-                <div className="flex justify-between items-center mb-8">
-                  <h3 className="text-3xl font-black text-purple-700">
-                    Aposta {i + 1} — {aposta.estrategia}
-                  </h3>
-                  {isVip && (
-                    <button
-                      onClick={() => saveGame(aposta)}
-                      disabled={savedGames.includes(aposta.id)}
-                      className={`p-4 rounded-full transition-all ${
-                        savedGames.includes(aposta.id)
-                          ? 'bg-green-100 text-green-600'
-                          : 'hover:bg-gray-100 text-gray-500'
-                      }`}
-                    >
-                      {savedGames.includes(aposta.id) ? <CheckCircle className="w-8 h-8" /> : <Save className="w-8 h-8" />}
-                    </button>
-                  )}
-                </div>
+        {apostas.length > 0 && (
+          <>
+            <div className="flex justify-center gap-8 mb-12">
+              <div className="bg-white rounded-2xl shadow-xl p-3">
+                <button onClick={() => setViewMode('balls')} className={`p-4 rounded-xl ${viewMode === 'balls' ? 'bg-purple-600 text-white' : 'text-gray-600'}`}>
+                  <List className="w-8 h-8" />
+                </button>
+                <button onClick={() => setViewMode('ticket')} className={`p-4 rounded-xl ${viewMode === 'ticket' ? 'bg-purple-600 text-white' : 'text-gray-600'}`}>
+                  <Grid3X3 className="w-8 h-8" />
+                </button>
+              </div>
+            </div>
 
-                {viewMode === 'balls' ? (
-                  <div className="flex flex-wrap gap-5 justify-center">
-                    {aposta.numbers.map(num => (
-                      <LotteryBall
-                        key={num}
-                        number={num}
-                        isFixed={fixos.includes(num)}
-                        className={fixos.includes(num) ? 'ring-8 ring-yellow-400 scale-125' : ''}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <TicketView selectedNumbers={aposta.numbers} className="w-full" />
-                )}
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
+            <div className={viewMode === 'ticket' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12" : "space-y-12"}>
+              <AnimatePresence mode="wait">
+                {apostas.map((aposta, i) => (
+                  <motion.div
+                    key={aposta.id}
+                    initial={{ opacity: 0, y: 50 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.1 }}
+                    className="bg-white rounded-3xl p-10 shadow-2xl border-4 border-purple-100 hover:border-purple-400 transition-all"
+                  >
+                    <div className="flex justify-between items-center mb-8">
+                      <h3 className="text-3xl font-black text-purple-700">
+                        Aposta {i + 1} — {aposta.estrategia}
+                      </h3>
+                      {isVip && (
+                        <button
+                          onClick={() => saveGame(aposta)}
+                          disabled={savedGames.includes(aposta.id)}
+                          className={`p-4 rounded-full transition-all ${
+                            savedGames.includes(aposta.id)
+                              ? 'bg-green-100 text-green-600'
+                              : 'hover:bg-gray-100 text-gray-500'
+                          }`}
+                        >
+                          {savedGames.includes(aposta.id) ? <CheckCircle className="w-8 h-8" /> : <Save className="w-8 h-8" />}
+                        </button>
+                      )}
+                    </div>
+
+                    {viewMode === 'balls' ? (
+                      <div className="flex flex-wrap gap-5 justify-center">
+                        {aposta.numbers.map(num => (
+                          <LotteryBall
+                            key={num}
+                            number={num}
+                            isFixed={fixos.includes(num)}
+                            className={fixos.includes(num) ? 'ring-8 ring-yellow-400 scale-125' : ''}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <TicketView selectedNumbers={aposta.numbers} className="w-full" />
+                    )}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+          </>
+        )}
       </div>
     </section>
   )
