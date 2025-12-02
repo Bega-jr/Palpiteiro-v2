@@ -1,175 +1,149 @@
-from flask import Flask, jsonify
-from flask_cors import CORS
-import pandas as pd
-import os
-from datetime import datetime
-import random
+import { useState, useEffect } from 'react'
+import { Calendar, Trophy, DollarSign, Loader2 } from 'lucide-react'
+import { LotteryBall } from '../components/LotteryBall'
+import { toast } from 'sonner'
 
-app = Flask(__name__)
-CORS(app)
+interface Faixa {
+  faixa: string
+  ganhadores: number
+  premio: string
+}
 
-EXCEL_FILE = 'Lotofácil.xlsx'
+interface Resultado {
+  ultimo_concurso: string
+  data_ultimo: string
+  ultimos_numeros: number[]
+  ganhadores: Faixa[]
+  arrecadacao: string
+  estimativa_proximo: string
+  acumulou: boolean
+  data_referencia: string
+}
 
-def carregar_lotofacil():
-    if not os.path.exists(EXCEL_FILE):
-        print("Arquivo Lotofácil.xlsx não encontrado!")
-        return []
+export function Results() {
+  const [resultado, setResultado] = useState<Resultado | null>(null)
+  const [loading, setLoading] = useState(true)
 
-    try:
-        df = pd.read_excel(EXCEL_FILE, engine='openpyxl')
-        lotofacil = []
-        
-        for _, row in df.iterrows():
-            try:
-                # 15 números na ordem oficial
-                numeros = []
-                for i in range(1, 16):
-                    bola = row.get(f'Bola{i}') or row.get(f'Bola {i}')
-                    if pd.notna(bola):
-                        numeros.append(int(bola))
-                
-                if len(numeros) != 15:
-                    continue
+  const BACKEND_URL = 'https://palpiteiro-v2-backend.vercel.app'
 
-                concurso = int(row['Concurso'])
-                data = str(row['Data Sorteio']).split(' ')[0]
+  useEffect(() => {
+    async function carregar() {
+      try {
+        setLoading(true)
+        const res = await fetch(`${BACKEND_URL}/api/resultados`)
+        const data = await res.json()
+        setResultado(data)
+      } catch {
+        toast.error('Erro ao carregar resultados oficiais')
+      } finally {
+        setLoading(false)
+      }
+    }
+    carregar()
+  }, [])
 
-                # Cidades premiadas (15 acertos)
-                cidades_raw = str(row.get('Cidade / UF', ''))
-                cidades = []
-                if cidades_raw and cidades_raw != 'nan':
-                    for item in cidades_raw.split(';'):
-                        item = item.strip()
-                        if '/' in item:
-                            cidade, uf = item.split('/', 1)
-                            cidades.append({
-                                "cidade": cidade.strip(),
-                                "uf": uf.strip(),
-                                "ganhadores": 1  # Cada entrada é um ganhador
-                            })
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-16 h-16 animate-spin text-purple-600" />
+      </div>
+    )
+  }
 
-                lotofacil.append({
-                    'concurso': concurso,
-                    'data': data,
-                    'numeros': numeros,
-                    'ganhadores_15': int(row.get('Ganhadores 15 acertos', 0)),
-                    'premio_15': str(row.get('Rateio 15 acertos', 'R$0,00')),
-                    'ganhadores_14': int(row.get('Ganhadores 14 acertos', 0)),
-                    'premio_14': str(row.get('Rateio 14 acertos', 'R$0,00')),
-                    'ganhadores_13': int(row.get('Ganhadores 13 acertos', 0)),
-                    'premio_13': str(row.get('Rateio 13 acertos', 'R$0,00')),
-                    'ganhadores_12': int(row.get('Ganhadores 12 acertos', 0)),
-                    'premio_12': str(row.get('Rateio 12 acertos', 'R$0,00')),
-                    'ganhadores_11': int(row.get('Ganhadores 11 acertos', 0)),
-                    'premio_11': str(row.get('Rateio 11 acertos', 'R$0,00')),
-                    'arrecadacao': str(row.get('Arrecadacao Total', 'R$0,00')),
-                    'estimativa': str(row.get('Estimativa Prêmio', 'R$0,00')),
-                    'acumulado_15': str(row.get('Acumulado 15 acertos', 'NÃO')),
-                    'acumulado_especial': str(row.get('Acumulado sorteio especial Lotofácil da Independência', 'R$0,00')),
-                    'observacao': str(row.get('Observação', '')),
-                    'cidades_premiadas': cidades
-                })
-            except Exception as e:
-                print(f"Erro ao processar linha: {e}")
-                continue
+  if (!resultado || resultado.erro) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-2xl text-red-600">
+          {resultado?.erro || 'Erro ao carregar resultados. Tente novamente.'}
+        </p>
+      </div>
+    )
+  }
 
-        print(f"Carregados {len(lotofacil)} concursos da Lotofácil")
-        return sorted(lotofacil, key=lambda x: x['concurso'], reverse=True)
+  return (
+    <div className="min-h-screen bg-white pt-20">
+      <div className="max-w-4xl mx-auto px-4">
+        {/* Concurso e Data */}
+        <div className="text-center mb-12">
+          <h1 className="text-5xl font-bold text-gray-900 mb-2">
+            Concurso {resultado.ultimo_concurso}
+          </h1>
+          <p className="text-lg text-gray-600 flex items-center justify-center gap-2">
+            <Calendar className="w-6 h-6" />
+            {resultado.data_ultimo}
+          </p>
+        </div>
 
-    except Exception as e:
-        print("Erro ao ler Excel:", e)
-        return []
+        {/* Números Sorteados */}
+        <div className="bg-gray-50 rounded-2xl p-8 mb-12">
+          <h3 className="text-xl font-bold text-center mb-6 text-gray-800">Números Sorteados</h3>
+          <div className="flex flex-wrap justify-center gap-4">
+            {resultado.ultimos_numeros.map(num => (
+              <LotteryBall key={num} number={num} className="w-16 h-16 text-2xl" />
+            ))}
+          </div>
+        </div>
 
-@app.route('/api/resultados', methods=['GET'])
-def resultados():
-    dados = carregar_lotofacil()
-    if not dados:
-        return jsonify({"erro": "Arquivo Excel não encontrado ou corrompido"})
+        {/* ACUMULOU! ou Estimativa */}
+        {resultado.acumulou ? (
+          <div className="bg-red-100 border-2 border-red-300 rounded-2xl p-8 mb-12 text-center">
+            <div className="bg-red-600 text-white px-12 py-6 rounded-full text-4xl font-black shadow-2xl">
+              ACUMULOU!
+            </div>
+            <p className="text-3xl font-bold text-red-700 mt-6">
+              {resultado.estimativa_proximo}
+            </p>
+          </div>
+        ) : (
+          <div className="bg-green-100 border-2 border-green-300 rounded-2xl p-8 mb-12 text-center">
+            <p className="text-3xl font-bold text-green-800 mb-4">Próximo Prêmio</p>
+            <p className="text-4xl font-black text-green-700">
+              {resultado.estimativa_proximo}
+            </p>
+          </div>
+        )}
 
-    ultimo = dados[0]
+        {/* Tabela de Premiação */}
+        <div className="bg-white rounded-2xl shadow-lg p-8 mb-12">
+          <h3 className="text-xl font-bold text-center mb-6 text-gray-800">Premiação por Faixa</h3>
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-gray-100 border-b-2 border-gray-300">
+                <th className="px-6 py-4 text-lg font-bold text-gray-700">Faixa</th>
+                <th className="px-6 py-4 text-lg font-bold text-center text-gray-700">Ganhadores</th>
+                <th className="px-6 py-4 text-lg font-bold text-right text-gray-700">Prêmio</th>
+              </tr>
+            </thead>
+            <tbody>
+              {resultado.ganhadores.map((faixa, i) => (
+                <tr key={i} className="border-b border-gray-200 hover:bg-gray-50">
+                  <td className="px-6 py-4 text-lg font-semibold text-gray-900">
+                    {faixa.faixa}
+                  </td>
+                  <td className="px-6 py-4 text-lg font-semibold text-center text-gray-900">
+                    {faixa.ganhadores > 0 ? faixa.ganhadores.toLocaleString('pt-BR') : '-'}
+                  </td>
+                  <td className="px-6 py-4 text-lg font-semibold text-right text-green-700">
+                    {faixa.premio}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
-    faixas = [
-        {
-            "faixa": "15 acertos",
-            "ganhadores": ultimo['ganhadores_15'],
-            "premio": ultimo['premio_15'],
-            "cidades": ultimo['cidades_premiadas']
-        },
-        {
-            "faixa": "14 acertos",
-            "ganhadores": ultimo['ganhadores_14'],
-            "premio": ultimo['premio_14']
-        },
-        {
-            "faixa": "13 acertos",
-            "ganhadores": ultimo['ganhadores_13'],
-            "premio": ultimo['premio_13']
-        },
-        {
-            "faixa": "12 acertos",
-            "ganhadores": ultimo['ganhadores_12'],
-            "premio": ultimo['premio_12']
-        },
-        {
-            "faixa": "11 acertos",
-            "ganhadores": ultimo['ganhadores_11'],
-            "premio": ultimo['premio_11']
-        },
-    ]
+        {/* Arrecadação */}
+        <div className="text-center">
+          <p className="text-lg text-gray-600">
+            Arrecadação Total: <strong>{resultado.arrecadacao}</strong>
+          </p>
+        </div>
 
-    return jsonify({
-        "ultimo_concurso": ultimo['concurso'],
-        "data_ultimo": ultimo['data'],
-        "ultimos_numeros": ultimo['numeros'],
-        "ganhadores": faixas,
-        "arrecadacao": ultimo['arrecadacao'],
-        "estimativa_proximo": ultimo['estimativa'],
-        "acumulou": ultimo['acumulado_15'] == 'SIM',
-        "acumulado_especial": ultimo['acumulado_especial'],
-        "observacao": ultimo['observacao'],
-        "data_referencia": ultimo['data']
-    })
-
-@app.route('/api/palpites', methods=['GET'])
-def palpites():
-    dados = carregar_lotofacil()
-    if len(dados) < 10:
-        return jsonify({"erro": "Histórico insuficiente"})
-
-    ultimos_50 = dados[:50]
-    contagem = {}
-    for jogo in ultimos_50:
-        for n in jogo['numeros']:
-            contagem[n] = contagem.get(n, 0) + 1
-
-    fixos = [n for n, c in sorted(contagem.items(), key=lambda x: x[1], reverse=True)[:5]]
-
-    def criar_aposta(base=[]):
-        aposta = base[:]
-        candidatos = [n for n in range(1, 26) if n not in aposta]
-        while len(aposta) < 15:
-            escolhido = random.choice(candidatos)
-            aposta.append(escolhido)
-            candidatos.remove(escolhido)
-        return sorted(aposta)
-
-    apostas = []
-    for i in range(7):
-        base = fixos if i < 5 else []
-        apostas.append(criar_aposta(base))
-
-    ultimo = dados[0]
-    return jsonify({
-        "gerado_em": datetime.now().strftime('%d/%m/%Y %H:%M'),
-        "ultimo_concurso": ultimo['concurso'],
-        "data_ultimo": ultimo['data'],
-        "fixos": fixos,
-        "apostas": apostas
-    })
-
-@app.route('/')
-def home():
-    return jsonify({"status": "Palpiteiro V2 - Excel Oficial Caixa", "online": True})
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+        <div className="text-center text-gray-500 text-base mt-20">
+          <p>Dados oficiais da Caixa Econômica Federal</p>
+          <p>Palpiteiro V2 © 2025</p>
+        </div>
+      </div>
+    </div>
+  )
+}
