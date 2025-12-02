@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Calendar, Trophy, DollarSign, Loader2 } from 'lucide-react'
+import { Calendar, Trophy, DollarSign, Loader2, MapPin, AlertCircle } from 'lucide-react'
 import { LotteryBall } from '../components/LotteryBall'
 import { toast } from 'sonner'
 
@@ -17,6 +17,7 @@ interface Resultado {
   arrecadacao: string
   estimativa_proximo: string
   acumulou: boolean
+  local_sorteio?: string
   acumulado_especial?: string
   observacao?: string
   data_referencia: string
@@ -55,7 +56,7 @@ export function Results() {
   if (!resultado || resultado.erro) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-xl text-red-600">Erro ao carregar. Tente novamente.</p>
+        <p className="text-2xl text-red-600">Erro ao carregar. Tente novamente.</p>
       </div>
     )
   }
@@ -65,17 +66,27 @@ export function Results() {
 
   return (
     <div className="min-h-screen bg-white pt-20">
-      <div className="max-w-5xl mx-auto px-4">
+      <div className="max-w-4xl mx-auto px-4">
         {/* Concurso e Data */}
         <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold text-gray-900 mb-2">
+          <h1 className="text-6xl font-black text-gray-900 mb-4">
             Concurso {resultado.ultimo_concurso}
           </h1>
-          <p className="text-lg text-gray-600 flex items-center justify-center gap-2">
-            <Calendar className="w-6 h-6" />
+          <p className="text-2xl text-gray-600 flex items-center justify-center gap-3">
+            <Calendar className="w-8 h-8" />
             {resultado.data_ultimo}
           </p>
         </div>
+
+        {/* Local do Sorteio */}
+        {resultado.local_sorteio && (
+          <div className="text-center mb-8">
+            <p className="text-xl text-gray-600 flex items-center justify-center gap-3">
+              <MapPin className="w-8 h-8" />
+              Sorteio realizado em <strong>{resultado.local_sorteio}</strong>
+            </p>
+          </div>
+        )}
 
         {/* Números Sorteados */}
         <div className="bg-gray-50 rounded-2xl p-8 mb-12">
@@ -90,11 +101,12 @@ export function Results() {
         {/* ACUMULOU! ou Estimativa */}
         {isAcumulou ? (
           <div className="bg-red-100 border-2 border-red-300 rounded-2xl p-8 mb-12 text-center">
+            <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-4" />
             <div className="bg-red-600 text-white px-12 py-6 rounded-full text-4xl font-black shadow-2xl">
               ACUMULOU!
             </div>
             {temAcumuladoEspecial ? (
-              <div className="mt-8">
+              <div className="mt-8>
                 <p className="text-3xl font-bold text-red-700">
                   {resultado.acumulado_especial}
                 </p>
@@ -118,27 +130,27 @@ export function Results() {
           </div>
         )}
 
-        {/* Tabela de Premiação — RESPONSIVA E LIMPA */}
-        <div className="bg-white rounded-2xl shadow-lg p-8 mb-12 overflow-x-auto">
+        {/* Tabela de Premiação */}
+        <div className="bg-white rounded-2xl shadow-lg p-8 mb-12">
           <h3 className="text-xl font-bold text-center mb-6 text-gray-800">Premiação por Faixa</h3>
-          <table className="w-full min-w-[600px] text-left border-collapse">
+          <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gray-100 border-b-2 border-gray-300">
-                <th className="px-4 py-3 text-base md:text-lg font-bold text-gray-700">Faixa</th>
-                <th className="px-4 py-3 text-base md:text-lg font-bold text-center text-gray-700">Ganhadores</th>
-                <th className="px-4 py-3 text-base md:text-lg font-bold text-right text-gray-700">Prêmio</th>
+                <th className="px-6 py-4 text-lg font-bold text-gray-700">Faixa</th>
+                <th className="px-6 py-4 text-lg font-bold text-center text-gray-700">Ganhadores</th>
+                <th className="px-6 py-4 text-lg font-bold text-right text-gray-700">Prêmio</th>
               </tr>
             </thead>
             <tbody>
               {resultado.ganhadores.map((faixa, i) => (
                 <tr key={i} className="border-b border-gray-200 hover:bg-gray-50">
-                  <td className="px-4 py-4 text-base md:text-lg font-semibold text-gray-900">
+                  <td className="px-6 py-4 text-lg font-semibold text-gray-900">
                     {faixa.faixa}
                   </td>
-                  <td className="px-4 py-4 text-base md:text-lg font-semibold text-center text-gray-900">
+                  <td className="px-6 py-4 text-lg font-semibold text-center text-gray-900">
                     {faixa.ganhadores > 0 ? faixa.ganhadores.toLocaleString('pt-BR') : '-'}
                   </td>
-                  <td className="px-4 py-4 text-base md:text-lg font-semibold text-right text-green-700">
+                  <td className="px-6 py-4 text-lg font-semibold text-right text-green-700">
                     {faixa.premio}
                   </td>
                 </tr>
@@ -147,17 +159,24 @@ export function Results() {
           </table>
         </div>
 
-        {/* Arrecadação e Estimativa */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-center mb-16">
+        {/* Informações Adicionais */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-center">
           <div className="bg-gray-100 rounded-2xl p-8">
             <p className="text-lg font-bold text-gray-700">Arrecadação Total</p>
             <p className="text-3xl font-black text-gray-900 mt-4">{resultado.arrecadacao}</p>
           </div>
           <div className="bg-gray-100 rounded-2xl p-8">
             <p className="text-lg font-bold text-gray-700">Estimativa Próximo</p>
-            <p className="text-3xl font-black text-green-600 mt-4">{resultado.estimativa_proximo}</p>
+            <p className="text-3xl font-black text-green-600 mt-4">{resultado.estimativa_proximo}</p}</p>
           </div>
         </div>
+
+        {/* Observação (ex: sorteio especial) */}
+        {resultado.observacao && (
+          <div className="text-center mt-16">
+            <p className="text-xl font-bold text-purple-700">{resultado.observacao}</p>
+          </div>
+        )}
 
         <div className="text-center text-gray-600 text-base mt-20">
           <p>Dados oficiais da Caixa Econômica Federal</p>
