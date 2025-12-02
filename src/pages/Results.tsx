@@ -167,7 +167,7 @@ export function Results() {
           </div>
           <div className="bg-gray-100 rounded-2xl p-8">
             <p className="text-lg font-bold text-gray-700">Estimativa Próximo</p>
-            <p className="text-3xl font-black text-green-600 mt-4">{resultado.estimativa_proximo}</p}</p>
+            <p className="text-3xl font-black text-green-600 mt-4">{resultado.estimativa_proximo}</p>
           </div>
         </div>
 
