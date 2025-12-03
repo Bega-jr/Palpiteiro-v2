@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { Wand2, RefreshCw, Grid3X3, List, Save, CheckCircle, Trophy } from 'lucide-react'
-import { motion } from 'framer-motion'
+import { useState, useEffect } from 'react'
+import { Wand2, RefreshCw, Trophy } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { LotteryBall } from './LotteryBall'
 import { TicketView } from './TicketView'
 import { useAuth } from '../contexts/AuthContext'
@@ -12,10 +12,19 @@ interface Aposta {
   estrategia: string
 }
 
+interface Estatisticas {
+  maisSorteados: { numero: number; vezes: number }[]
+  menosSorteados: { numero: number; vezes: number }[]
+  moda: number
+  atrasados: number[]
+  finais: { [key: number]: number }
+}
+
 export function Generator() {
   const { isVip } = useAuth()
   const [apostas, setApostas] = useState<Aposta[]>([])
   const [fixos, setFixos] = useState<number[]>([])
+  const [estatisticas, setEstatisticas] = useState<Estatisticas | null>(null)
   const [isGenerating, setIsGenerating] = useState(false)
   const [viewMode, setViewMode] = useState<'balls' | 'ticket'>('balls')
 
@@ -25,19 +34,25 @@ export function Generator() {
     setIsGenerating(true)
 
     try {
-      const response = await fetch(`${BACKEND_URL}/api/palpites`)
-      const data = await response.json()
+      const [palpitesRes, estatisticasRes] = await Promise.all([
+        fetch(`${BACKEND_URL}/api/palpites`),
+        fetch(`${BACKEND_URL}/api/estatisticas`)
+      ])
 
-      if (data.apostas && data.fixos) {
-        const estrategias = ['Quentes + Fixos', 'Balanceado', 'Frios', 'Final 0', 'Padrão', 'Modo Grok', 'Surpresa']
-        const novosJogos = data.apostas.map((nums: number[], i: number) => ({
+      const palpitesData = await palpitesRes.json()
+      const estatisticasData = await estatisticasRes.json()
+
+      if (palpitesData.apostas && Array.isArray(palpitesData.apostas)) {
+        const estrategias = ['Quentes + Fixos', 'Frios + Balanceado', 'Equilíbrio Total', 'Final 0', 'Padrão Caixa', 'Modo Grok', 'Surpresa Máxima']
+        const novosJogos = palpitesData.apostas.map((nums: number[], i: number) => ({
           id: i + 1,
           numbers: nums,
           estrategia: estrategias[i] || 'Estratégia'
         }))
 
         setApostas(novosJogos)
-        setFixos(data.fixos)
+        setFixos(palpitesData.fixos || [])
+        setEstatisticas(estatisticasData)
         toast.success(isVip ? 'Novos palpites gerados!' : 'Palpites do dia carregados!')
       }
     } catch {
@@ -47,65 +62,19 @@ export function Generator() {
     }
   }
 
+  useEffect(() => {
+    handleGenerate()
+  }, [])
+
   return (
     <section className="py-16 bg-gradient-to-b from-purple-50 to-white">
       <div className="max-w-7xl mx-auto px-4">
-        {/* Cabeçalho */}
         <div className="text-center mb-12">
           <h2 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 mb-4">
-            Gerador de Palpites Inteligentes
+            Gerador de Desdobramentos
           </h2>
           <p className="text-xl text-gray-700">Baseado em dados oficiais da Caixa</p>
         </div>
-
-        {/* Tabela de credibilidade — SÓ PRA NÃO-VIP */}
-        {!isVip && (
-          <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-3xl shadow-2xl p-10 mb-16 text-center">
-            <Trophy className="w-20 h-20 mx-auto mb-6 text-yellow-500" />
-            <h3 className="text-4xl font-black text-orange-800 mb-8">
-              Nosso palpite fixo já acertou:
-            </h3>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-8 max-w-4xl mx-auto">
-              <div className="bg-white rounded-2xl p-6 shadow-xl">
-                <p className="text-5xl font-black text-purple-700">325×</p>
-                <p className="text-xl font-bold text-gray-800 mt-2">11 acertos</p>
-              </div>
-              <div className="bg-white rounded-2xl p-6 shadow-xl">
-                <p className="text-5xl font-black text-purple-700">200×</p>
-                <p className="text-xl font-bold text-gray-800 mt-2">12 acertos</p>
-              </div>
-              <div className="bg-white rounded-2xl p-6 shadow-xl">
-                <p className="text-5xl font-black text-green-600">87×</p>
-                <p className="text-xl font-bold text-gray-800 mt-2">13 acertos</p>
-              </div>
-              <div className="bg-white rounded-2xl p-6 shadow-xl">
-                <p className="text-5xl font-black text-green-600">12×</p>
-                <p className="text-xl font-bold text-gray-800 mt-2">14 acertos</p>
-              </div>
-              <div className="bg-white rounded-2xl p-6 shadow-xl">
-                <p className="text-5xl font-black text-yellow-500">3×</p>
-                <p className="text-xl font-bold text-gray-800 mt-2">15 acertos</p>
-              </div>
-            </div>
-            <p className="text-2xl text-gray-800 mt-10 font-bold">
-              Isso é só o grátis... imagina o VIP!
-            </p>
-          </div>
-        )}
-
-        {/* Fixos */}
-        {fixos.length > 0 && (
-          <div className="text-center mb-12">
-            <p className="text-2xl font-bold text-gray-800 mb-6">Números Fixos do Dia</p>
-            <div className="flex justify-center gap-6 flex-wrap">
-              {fixos.map(n => (
-                <div key={n} className="w-20 h-20 bg-gradient-to-br from-yellow-500 to-orange-600 text-white rounded-full flex items-center justify-center text-4xl font-black shadow-2xl ring-8 ring-yellow-300">
-                  {n.toString().padStart(2, '0')}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Botão */}
         <div className="text-center mb-16">
@@ -130,15 +99,29 @@ export function Generator() {
           </button>
         </div>
 
+        {/* Fixos */}
+        {fixos.length > 0 && (
+          <div className="text-center mb-12">
+            <p className="text-2xl font-bold text-gray-800 mb-6">Números Fixos do Dia</p>
+            <div className="flex justify-center gap-6 flex-wrap">
+              {fixos.map(n => (
+                <div key={n} className="w-20 h-20 bg-gradient-to-br from-yellow-500 to-orange-600 text-white rounded-full flex items-center justify-center text-4xl font-black shadow-2xl ring-8 ring-yellow-300">
+                  {n.toString().padStart(2, '0')}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Apostas */}
         {apostas.length > 0 && (
           <>
             <div className="flex justify-center gap-8 mb-12">
               <button onClick={() => setViewMode('balls')} className={`p-4 rounded-xl ${viewMode === 'balls' ? 'bg-purple-600 text-white' : 'bg-gray-200'}`}>
-                <List className="w-8 h-8" />
+                Bolas
               </button>
               <button onClick={() => setViewMode('ticket')} className={`p-4 rounded-xl ${viewMode === 'ticket' ? 'bg-purple-600 text-white' : 'bg-gray-200'}`}>
-                <Grid3X3 className="w-8 h-8" />
+                Bilhete
               </button>
             </div>
 
@@ -153,16 +136,30 @@ export function Generator() {
                   <h3 className="text-3xl font-black text-purple-700 text-center mb-8">
                     Aposta {i + 1} — {aposta.estrategia}
                   </h3>
+
                   {viewMode === 'balls' ? (
                     <div className="flex flex-wrap gap-5 justify-center">
-                      {aposta.numbers.map(num => (
-                        <LotteryBall
-                          key={num}
-                          number={num}
-                          isFixed={fixos.includes(num)}
-                          className={fixos.includes(num) ? 'ring-8 ring-yellow-400 scale-125' : ''}
-                        />
-                      ))}
+                      {aposta.numbers.map(num => {
+                        const stats = estatisticas
+                        const isQuente = stats?.maisSorteados.some(s => s.numero === num)
+                        const isFrio = stats?.menosSorteados.some(s => s.numero === num)
+                        const isAtrasado = stats?.atrasados.includes(num)
+                        const isModa = stats?.moda === num
+                        const finalQuente = stats && Math.max(...Object.values(stats.finais)) === stats.finais[num % 10]
+
+                        return (
+                          <LotteryBall
+                            key={num}
+                            number={num}
+                            isQuente={isQuente}
+                            isFrio={isFrio}
+                            isAtrasado={isAtrasado}
+                            isModa={isModa}
+                            isFinalQuente={finalQuente}
+                            className={fixos.includes(num) ? 'ring-8 ring-yellow-400 scale-125' : ''}
+                          />
+                        )
+                      })}
                     </div>
                   ) : (
                     <TicketView selectedNumbers={aposta.numbers} className="w-full" />
