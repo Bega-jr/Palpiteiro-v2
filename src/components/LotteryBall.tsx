@@ -1,26 +1,50 @@
-import { cn } from '../lib/utils';
-
 interface LotteryBallProps {
-  number: number;
-  isHot?: boolean;
-  isCold?: boolean;
-  className?: string;
+  number: number
+  isQuente?: boolean
+  isFrio?: boolean
+  isAtrasado?: boolean
+  isModa?: boolean
+  isFinalQuente?: boolean
+  className?: string
 }
 
-export function LotteryBall({ number, isHot, isCold, className }: LotteryBallProps) {
-  // Cores baseadas na Lotofácil (Roxo/Rosa)
+export function LotteryBall({ 
+  number, 
+  isQuente, 
+  isFrio, 
+  isAtrasado, 
+  isModa, 
+  isFinalQuente,
+  className = '' 
+}: LotteryBallProps) {
+  let bgColor = 'bg-gray-200 text-gray-700'
+  let ringColor = ''
+  let scale = ''
+  let shadow = 'shadow-lg'
+
+  if (isModa) {
+    bgColor = 'bg-gradient-to-br from-yellow-400 to-orange-500 text-white'
+    ringColor = 'ring-8 ring-yellow-300'
+    scale = 'scale-125'
+    shadow = 'shadow-2xl'
+  } else if (isAtrasado) {
+    bgColor = 'bg-gradient-to-br from-purple-600 to-pink-600 text-white'
+    ringColor = 'ring-8 ring-purple-400'
+    scale = 'scale-110'
+  } else if (isQuente) {
+    bgColor = 'bg-gradient-to-br from-red-500 to-pink-500 text-white'
+    ringColor = 'ring-8 ring-red-300'
+  } else if (isFrio) {
+    bgColor = 'bg-gradient-to-br from-blue-400 to-cyan-400 text-white'
+    ringColor = 'ring-8 ring-blue-300'
+  } else if (isFinalQuente) {
+    bgColor = 'bg-gradient-to-br from-green-400 to-emerald-500 text-white'
+    ringColor = 'ring-8 ring-green-300'
+  }
+
   return (
-    <div
-      className={cn(
-        "w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-sm sm:text-base font-bold shadow-sm transition-all duration-300",
-        isHot && "bg-red-100 text-red-700 border-2 border-red-200",
-        isCold && "bg-blue-100 text-blue-700 border-2 border-blue-200",
-        !isHot && !isCold && "bg-white text-gray-700 border border-gray-200",
-        "hover:scale-110 cursor-default",
-        className
-      )}
-    >
+    <div className={`w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center text-2xl md:text-3xl font-black transition-all ${bgColor} ${ringColor} ${scale} ${shadow} ${className}`}>
       {number.toString().padStart(2, '0')}
     </div>
-  );
+  )
 }
