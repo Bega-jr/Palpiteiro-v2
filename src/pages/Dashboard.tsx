@@ -3,6 +3,7 @@ import { Trophy, TrendingUp, DollarSign, Calendar, Loader2, CheckSquare } from '
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { toast } from 'sonner'
+import { Link } from 'react-router-dom'
 
 interface JogoSalvo {
   id: string
