@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Trophy, DollarSign, TrendingUp, Calendar, Award, CheckCircle } from 'lucide-react'
+import { Trophy, DollarSign, TrendingUp, CheckCircle, XCircle } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { toast } from 'sonner'
@@ -8,9 +8,8 @@ interface JogoSalvo {
   id: string
   numbers: number[]
   created_at: string
-  concurso?: number
   acertos?: number
-  premio?: number
+  premio?: string
   faixa?: string
 }
 
@@ -18,35 +17,63 @@ export function DashboardVip() {
   const { user } = useAuth()
   const [jogos, setJogos] = useState<JogoSalvo[]>([])
   const [loading, setLoading] = useState(true)
+  const [lucroTotal, setLucroTotal] = useState(0)
+
+  const BACKEND_URL = 'https://palpiteiro-v2-backend.vercel.app'
 
   useEffect(() => {
     async function carregar() {
-      if (!user) {
-        setLoading(false)
-        return
-      }
+      if (!user) return
 
       try {
-        setLoading(true)
-
-        // PUXA TODOS OS JOGOS SALVOS DO USUÁRIO
-        const { data, error } = await supabase
-          .from('saved_games') // ← Certifique-se que a tabela se chama exatamente "saved_games"
+        // 1. Pega jogos salvos
+        const { data: jogosDb } = await supabase
+          .from('saved_games')
           .select('*')
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
 
-        if (error) {
-          console.error('Erro Supabase:', error)
-          toast.error('Erro ao carregar jogos salvos')
+        if (!jogosDb || jogosDb.length === 0) {
           setJogos([])
-        } else {
-          console.log('Jogos carregados:', data)
-          setJogos(data || [])
+          setLoading(false)
+          return
         }
+
+        // 2. Pega último resultado oficial
+        const res = await fetch(`${BACKEND_URL}/api/resultados`)
+        const resultado = await res.json()
+        const sorteioAtual = resultado.ultimos_numeros
+
+        // 3. Confere cada jogo
+        let totalGanho = 0
+        const jogosConferidos = jogosDb.map(jogo => {
+          const acertos = jogo.numbers.filter((n: number) => sorteioAtual.includes(n)).length
+
+          let premio = 'R$0,00'
+          let faixa = 'Sem prêmio'
+
+          if (acertos >= 11) {
+            const faixaInfo = resultado.ganhadores.find((f: any) => {
+              if (acertos === 15) return f.faixa === "15 acertos"
+              if (acertos === 14) return f.faixa === "14 acertos"
+              if (acertos === 13) return f.faixa === "13 acertos"
+              if (acertos === 12) return f.faixa === "12 acertos"
+              if (acertos === 11) return f.faixa === "11 acertos"
+              return false
+            })
+            premio = faixaInfo?.premio || 'R$0,00'
+            faixa = faixaInfo?.faixa || 'Prêmio fixo'
+            totalGanho += parseFloat(premio.replace(/[^\d,]/g, '').replace(',', '.'))
+          }
+
+          return { ...jogo, acertos, premio, faixa }
+        })
+
+        setJogos(jogosConferidos)
+        setLucroTotal(totalGanho - jogosDb.length * 3) // 3 reais por aposta
       } catch (err) {
-        console.error('Erro inesperado:', err)
-        toast.error('Erro ao conectar com o banco')
+        console.error(err)
+        toast.error('Erro ao conferir jogos')
       } finally {
         setLoading(false)
       }
@@ -55,24 +82,14 @@ export function DashboardVip() {
     carregar()
   }, [user])
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-purple-50 to-white">
-        <p className="text-2xl text-gray-600">Carregando seu Dashboard VIP...</p>
-      </div>
-    )
-  }
+  if (loading) return <div className="pt-32 text-center text-2xl">Carregando seu Dashboard VIP...</div>
 
   if (jogos.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-purple-900 to-pink-900 text-white pt-20">
-        <div className="max-w-4xl mx-auto px-4 text-center py-32">
-          <Trophy className="w-40 h-40 mx-auto mb-8 text-yellow-400" />
-          <h2 className="text-5xl font-black mb-8">Você ainda não salvou nenhum jogo</h2>
-          <p className="text-2xl text-gray-300">
-            Gere palpites e clique em "Salvar Jogo" para começar!
-          </p>
-        </div>
+      <div className="min-h-screen bg-gradient-to-b from-purple-900 to-pink-900 text-white pt-20 text-center">
+        <Trophy className="w-32 h-32 mx-auto mb-8 text-yellow-400" />
+        <h2 className="text-5xl font-black mb-8">Você ainda não salvou nenhum jogo</h2>
+        <p className="text-2xl">Gere palpites e clique em "Salvar Jogo" para começar!</p>
       </div>
     )
   }
@@ -80,46 +97,54 @@ export function DashboardVip() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-purple-900 to-pink-900 text-white pt-20">
       <div className="max-w-6xl mx-auto px-4 py-16">
-        <h1 className="text-6xl font-black text-center mb-16">
-          Dashboard VIP — {user?.email?.split('@')[0]}
-        </h1>
+        <h1 className="text-6xl font-black text-center mb-12">Dashboard VIP</h1>
 
-        <div className="bg-white/10 backdrop-blur-lg rounded-3xl p-12">
-          <h3 className="text-4xl font-black text-center mb-12">
-            Seus Jogos Salvos ({jogos.length})
-          </h3>
+        {/* LUCRO TOTAL */}
+        <div className="text-center mb-16">
+          <DollarSign className="w-24 h-24 mx-auto mb-6 text-green-400" />
+          <p className="text-4xl font-bold">Lucro Real</p>
+          <p className={`text-8xl font-black mt-6 ${lucroTotal >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+            R$ {lucroTotal.toFixed(2)}
+          </p>
+        </div>
 
-          <div className="space-y-10">
-            {jogos.map((jogo, i) => (
-              <div key={jogo.id} className="bg-white/20 rounded-2xl p-8 shadow-2xl">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-6">
-                  <div>
-                    <p className="text-xl font-bold">
-                      Jogo {i + 1} — Salvo em {new Date(jogo.created_at).toLocaleString('pt-BR')}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-3xl font-black text-yellow-400">
-                      {jogo.acertos || 0} acertos
-                    </p>
-                    {jogo.acertos && jogo.acertos >= 11 && (
-                      <p className="text-2xl text-green-400 mt-2">
-                        {jogo.faixa || 'Prêmio'}
-                      </p>
-                    )}
-                  </div>
+        {/* LISTA DE JOGOS CONFERIDOS */}
+        <div className="space-y-8">
+          {jogos.map((jogo, i) => (
+            <div key={jogo.id} className="bg-white/20 backdrop-blur-lg rounded-3xl p-8 shadow-2xl">
+              <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+                <div>
+                  <p className="text-2xl font-bold">Jogo {i + 1}</p>
+                  <p className="text-lg opacity-80">
+                    Salvo em {new Date(jogo.created_at).toLocaleDateString('pt-BR')}
+                  </p>
                 </div>
 
-                <div className="flex flex-wrap gap-4">
+                <div className="text-center">
+                  <p className="text-6xl font-black">
+                    {jogo.acertos} acertos
+                  </p>
+                  <p className="text-3xl font-bold text-yellow-400">{jogo.faixa}</p>
+                  <p className="text-4xl font-black text-green-400">{jogo.premio}</p>
+                </div>
+
+                <div className="flex gap-3 flex-wrap justify-center">
                   {jogo.numbers.map(num => (
-                    <div key={num} className="w-14 h-14 bg-purple-600 rounded-full flex items-center justify-center text-2xl font-black shadow-lg">
+                    <div
+                      key={num}
+                      className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl font-black ${
+                        sorteioAtual.includes(num)
+                          ? 'bg-green-500 text-white ring-4 ring-green-300'
+                          : 'bg-white/30 text-white'
+                      }`}
+                    >
                       {num.toString().padStart(2, '0')}
                     </div>
                   ))}
                 </div>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
