@@ -27,7 +27,7 @@ export function Generator() {
     setIsGenerating(true)
 
     try {
-      const response = await fetch(`${BACKEND_URL}/api/palpites`)
+      const response = await fetch(`${BACKEND_URL}/api/palpites-vip`)
       const data = await response.json()
 
       if (data.apostas && data.fixos) {
