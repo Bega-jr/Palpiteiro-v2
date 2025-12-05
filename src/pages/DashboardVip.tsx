@@ -18,6 +18,7 @@ export function DashboardVip() {
   const [jogos, setJogos] = useState<JogoSalvo[]>([])
   const [loading, setLoading] = useState(true)
   const [lucroTotal, setLucroTotal] = useState(0)
+  const [sorteioAtual, setSorteioAtual] = useState<number[]>([]) // AQUI ESTAVA O PROBLEMA!
 
   const BACKEND_URL = 'https://palpiteiro-v2-backend.vercel.app'
 
@@ -42,12 +43,14 @@ export function DashboardVip() {
         // 2. Pega último resultado oficial
         const res = await fetch(`${BACKEND_URL}/api/resultados`)
         const resultado = await res.json()
-        const sorteioAtual = resultado.ultimos_numeros
+        const numerosSorteados = resultado.ultimos_numeros || []
+
+        setSorteioAtual(numerosSorteados) // AQUI COLOCA NO STATE
 
         // 3. Confere cada jogo
         let totalGanho = 0
         const jogosConferidos = jogosDb.map(jogo => {
-          const acertos = jogo.numbers.filter((n: number) => sorteioAtual.includes(n)).length
+          const acertos = jogo.numbers.filter((n: number) => numerosSorteados.includes(n)).length
 
           let premio = 'R$0,00'
           let faixa = 'Sem prêmio'
@@ -63,14 +66,14 @@ export function DashboardVip() {
             })
             premio = faixaInfo?.premio || 'R$0,00'
             faixa = faixaInfo?.faixa || 'Prêmio fixo'
-            totalGanho += parseFloat(premio.replace(/[^\d,]/g, '').replace(',', '.'))
+            totalGanho += parseFloat(premio.replace(/[^\d,]/g, '').replace(',', '.')) || 0
           }
 
           return { ...jogo, acertos, premio, faixa }
         })
 
         setJogos(jogosConferidos)
-        setLucroTotal(totalGanho - jogosDb.length * 3) // 3 reais por aposta
+        setLucroTotal(totalGanho - jogosDb.length * 3) // R$3 por aposta
       } catch (err) {
         console.error(err)
         toast.error('Erro ao conferir jogos')
@@ -108,7 +111,7 @@ export function DashboardVip() {
           </p>
         </div>
 
-        {/* LISTA DE JOGOS CONFERIDOS */}
+        {/* LISTA DE JOGOS */}
         <div className="space-y-8">
           {jogos.map((jogo, i) => (
             <div key={jogo.id} className="bg-white/20 backdrop-blur-lg rounded-3xl p-8 shadow-2xl">
@@ -122,19 +125,19 @@ export function DashboardVip() {
 
                 <div className="text-center">
                   <p className="text-6xl font-black">
-                    {jogo.acertos} acertos
+                    {jogo.acertos || 0} acertos
                   </p>
-                  <p className="text-3xl font-bold text-yellow-400">{jogo.faixa}</p>
-                  <p className="text-4xl font-black text-green-400">{jogo.premio}</p>
+                  <p className="text-3xl font-bold text-yellow-400">{jogo.faixa || 'Sem prêmio'}</p>
+                  <p className="text-4xl font-black text-green-400">{jogo.premio || 'R$0,00'}</p>
                 </div>
 
-                <div className="flex gap-3 flex-wrap justify-center">
+                <div className="flex flex-wrap gap-3 justify-center">
                   {jogo.numbers.map(num => (
                     <div
                       key={num}
-                      className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl font-black ${
+                      className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl font-black transition-all ${
                         sorteioAtual.includes(num)
-                          ? 'bg-green-500 text-white ring-4 ring-green-300'
+                          ? 'bg-green-500 text-white ring-4 ring-green-300 scale-110'
                           : 'bg-white/30 text-white'
                       }`}
                     >
