@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Trophy, DollarSign, TrendingUp, CheckCircle, XCircle } from 'lucide-react'
+import { Trophy, DollarSign, CheckCircle } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { toast } from 'sonner'
@@ -17,8 +17,8 @@ export function DashboardVip() {
   const { user } = useAuth()
   const [jogos, setJogos] = useState<JogoSalvo[]>([])
   const [loading, setLoading] = useState(true)
-  const [lucroTotal, setLucroTotal] = useState(0)
-  const [sorteioAtual, setSorteioAtual] = useState<number[]>([]) // AQUI ESTAVA O PROBLEMA!
+  const [lucroTotal, setLucroTotal] = useState<number>(0) // ← AQUI ERA O PROBLEMA!
+  const [sorteioAtual, setSorteioAtual] = useState<number[]>([])
 
   const BACKEND_URL = 'https://palpiteiro-v2-backend.vercel.app'
 
@@ -27,6 +27,8 @@ export function DashboardVip() {
       if (!user) return
 
       try {
+        setLoading(true)
+
         // 1. Pega jogos salvos
         const { data: jogosDb } = await supabase
           .from('saved_games')
@@ -36,16 +38,17 @@ export function DashboardVip() {
 
         if (!jogosDb || jogosDb.length === 0) {
           setJogos([])
+          setLucroTotal(0)
           setLoading(false)
           return
         }
 
-        // 2. Pega último resultado oficial
+        // 2. Pega último resultado
         const res = await fetch(`${BACKEND_URL}/api/resultados`)
         const resultado = await res.json()
         const numerosSorteados = resultado.ultimos_numeros || []
 
-        setSorteioAtual(numerosSorteados) // AQUI COLOCA NO STATE
+        setSorteioAtual(numerosSorteados)
 
         // 3. Confere cada jogo
         let totalGanho = 0
@@ -57,12 +60,7 @@ export function DashboardVip() {
 
           if (acertos >= 11) {
             const faixaInfo = resultado.ganhadores.find((f: any) => {
-              if (acertos === 15) return f.faixa === "15 acertos"
-              if (acertos === 14) return f.faixa === "14 acertos"
-              if (acertos === 13) return f.faixa === "13 acertos"
-              if (acertos === 12) return f.faixa === "12 acertos"
-              if (acertos === 11) return f.faixa === "11 acertos"
-              return false
+              return f.faixa === `${acertos} acertos`
             })
             premio = faixaInfo?.premio || 'R$0,00'
             faixa = faixaInfo?.faixa || 'Prêmio fixo'
@@ -76,7 +74,8 @@ export function DashboardVip() {
         setLucroTotal(totalGanho - jogosDb.length * 3) // R$3 por aposta
       } catch (err) {
         console.error(err)
-        toast.error('Erro ao conferir jogos')
+        toast.error('Erro ao carregar dashboard')
+        setLucroTotal(0)
       } finally {
         setLoading(false)
       }
@@ -85,14 +84,20 @@ export function DashboardVip() {
     carregar()
   }, [user])
 
-  if (loading) return <div className="pt-32 text-center text-2xl">Carregando seu Dashboard VIP...</div>
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-purple-900 to-pink-900 text-white pt-20 text-center">
+        <p className="text-3xl">Carregando seu Dashboard VIP...</p>
+      </div>
+    )
+  }
 
   if (jogos.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-purple-900 to-pink-900 text-white pt-20 text-center">
         <Trophy className="w-32 h-32 mx-auto mb-8 text-yellow-400" />
         <h2 className="text-5xl font-black mb-8">Você ainda não salvou nenhum jogo</h2>
-        <p className="text-2xl">Gere palpites e clique em "Salvar Jogo" para começar!</p>
+        <p className="text-2xl">Gere palpites e clique em "Salvar Jogo"</p>
       </div>
     )
   }
@@ -124,9 +129,7 @@ export function DashboardVip() {
                 </div>
 
                 <div className="text-center">
-                  <p className="text-6xl font-black">
-                    {jogo.acertos || 0} acertos
-                  </p>
+                  <p className="text-6xl font-black">{jogo.acertos || 0} acertos</p>
                   <p className="text-3xl font-bold text-yellow-400">{jogo.faixa || 'Sem prêmio'}</p>
                   <p className="text-4xl font-black text-green-400">{jogo.premio || 'R$0,00'}</p>
                 </div>
