@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Trophy, DollarSign, CheckCircle } from 'lucide-react'
+import { Trophy, DollarSign } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { toast } from 'sonner'
@@ -17,10 +17,10 @@ export function DashboardVip() {
   const { user } = useAuth()
   const [jogos, setJogos] = useState<JogoSalvo[]>([])
   const [loading, setLoading] = useState(true)
-  const [lucroTotal, setLucroTotal] = useState<number>(0) // ← AQUI ERA O PROBLEMA!
+  const [lucroTotal, setLucroTotal] = useState<number>(0)
   const [sorteioAtual, setSorteioAtual] = useState<number[]>([])
 
-  const BACKEND_URL = 'https://palpiteiro-v2-backend.vercel.app'
+  const BACKEND_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000'
 
   useEffect(() => {
     async function carregar() {
@@ -46,37 +46,38 @@ export function DashboardVip() {
         // 2. Pega último resultado
         const res = await fetch(`${BACKEND_URL}/api/resultados`)
         const resultado = await res.json()
-        const numerosSorteados = resultado.ultimos_numeros || []
+        const numerosSorteados: number[] = resultado.ultimos_numeros || []
 
         setSorteioAtual(numerosSorteados)
 
         // 3. Confere cada jogo
         let totalGanho = 0
-        const jogosConferidos = jogosDb.map(jogo => {
+        const jogosConferidos = jogosDb.map((jogo: any) => {
           const acertos = jogo.numbers.filter((n: number) => numerosSorteados.includes(n)).length
 
           let premio = 'R$0,00'
           let faixa = 'Sem prêmio'
 
           if (acertos >= 11) {
-            const faixaInfo = resultado.ganhadores.find((f: any) => {
+            const faixaInfo = (resultado.ganhadores || []).find((f: any) => {
               return f.faixa === `${acertos} acertos`
             })
             premio = faixaInfo?.premio || 'R$0,00'
             faixa = faixaInfo?.faixa || 'Prêmio fixo'
-            const valor = Number(
-            (premio || "0").replace(/[^\d,]/g, "").replace(",", ".")
-            )
 
+            // conversão segura
+            const cleaned = (premio || '0').toString().replace(/[^\d,]/g, '').replace(',', '.')
+            const valor = Number(cleaned) || 0
             totalGanho += isNaN(valor) ? 0 : valor
-
-            }
+          }
 
           return { ...jogo, acertos, premio, faixa }
         })
 
         setJogos(jogosConferidos)
-        setLucroTotal(totalGanho - jogosDb.length * 3) // R$3 por aposta
+        // custo por aposta: R$3 (ajuste conforme seu sistema)
+        const custoPorAposta = 3
+        setLucroTotal(Number((totalGanho - (jogosDb.length * custoPorAposta)) || 0))
       } catch (err) {
         console.error(err)
         toast.error('Erro ao carregar dashboard')
@@ -117,9 +118,8 @@ export function DashboardVip() {
           <DollarSign className="w-24 h-24 mx-auto mb-6 text-green-400" />
           <p className="text-4xl font-bold">Lucro Real</p>
           <p className={`text-8xl font-black mt-6 ${lucroTotal >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-          R$ {Number(lucroTotal || 0).toFixed(2)}
+            R$ {Number(lucroTotal || 0).toFixed(2)}
           </p>
-
         </div>
 
         {/* LISTA DE JOGOS */}
@@ -141,11 +141,11 @@ export function DashboardVip() {
                 </div>
 
                 <div className="flex flex-wrap gap-3 justify-center">
-                  {jogo.numbers.map(num => (
+                  {jogo.numbers.map((num: number) => (
                     <div
                       key={num}
                       className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl font-black transition-all ${
-                        sorteioAtual.includes(num)
+                        (sorteioAtual || []).includes(num)
                           ? 'bg-green-500 text-white ring-4 ring-green-300 scale-110'
                           : 'bg-white/30 text-white'
                       }`}
