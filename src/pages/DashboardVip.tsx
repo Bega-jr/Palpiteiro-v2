@@ -64,8 +64,13 @@ export function DashboardVip() {
             })
             premio = faixaInfo?.premio || 'R$0,00'
             faixa = faixaInfo?.faixa || 'Prêmio fixo'
-            totalGanho += parseFloat(premio.replace(/[^\d,]/g, '').replace(',', '.')) || 0
-          }
+            const valor = Number(
+            (premio || "0").replace(/[^\d,]/g, "").replace(",", ".")
+            )
+
+            totalGanho += isNaN(valor) ? 0 : valor
+
+            }
 
           return { ...jogo, acertos, premio, faixa }
         })
@@ -112,8 +117,9 @@ export function DashboardVip() {
           <DollarSign className="w-24 h-24 mx-auto mb-6 text-green-400" />
           <p className="text-4xl font-bold">Lucro Real</p>
           <p className={`text-8xl font-black mt-6 ${lucroTotal >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-            R$ {lucroTotal.toFixed(2)}
+          R$ {Number(lucroTotal || 0).toFixed(2)}
           </p>
+
         </div>
 
         {/* LISTA DE JOGOS */}
