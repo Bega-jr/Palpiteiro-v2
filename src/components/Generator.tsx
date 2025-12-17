@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Wand2, RefreshCw, Trophy, Save, CheckCircle } from 'lucide-react'
+import { Wand2, RefreshCw, Trophy, Save, CheckCircle, List, Grid3X3 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { LotteryBall } from './LotteryBall'
 import { TicketView } from './TicketView'
@@ -7,13 +7,22 @@ import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { toast } from 'sonner'
 
+// Aposta agora reflete a estrutura do backend
 interface Aposta {
   id: number
   numbers: number[]
   estrategia: string
 }
 
-export function Generator() {
+interface PalpitesResponse {
+  gerado_em: string
+  fixos: number[]
+  apostas: number[][]
+  erro?: string // Adicionado para tratar erros do backend
+}
+
+// Exportação padrão para corrigir o erro de build anterior
+export default function Generator() {
   const { isVip, user } = useAuth()
   const [apostas, setApostas] = useState<Aposta[]>([])
   const [fixos, setFixos] = useState<number[]>([])
@@ -21,29 +30,47 @@ export function Generator() {
   const [viewMode, setViewMode] = useState<'balls' | 'ticket'>('balls')
   const [savedGames, setSavedGames] = useState<number[]>([])
 
-  const BACKEND_URL = 'https://palpiteiro-v2-backend.vercel.app'
+  // URL do backend (ajustar conforme o deploy final)
+  const BACKEND_URL = 'https://palpiteiro-v2-backend.vercel.app' 
 
-  const handleGenerate = async () => {
+  const handleGenerate = async ( ) => {
     setIsGenerating(true)
 
     try {
-      const response = await fetch(`${BACKEND_URL}/api/palpites-vip`)
-      const data = await response.json()
+      // O novo endpoint é /api/palpites
+      const response = await fetch(`${BACKEND_URL}/api/palpites`)
+      const data: PalpitesResponse = await response.json()
 
       if (data.apostas && data.fixos) {
-        const estrategias = ['Quentes + Fixos', 'Frios + Balanceado', 'Equilíbrio Total', 'Final 0', 'Padrão Caixa', 'Modo Grok', 'Surpresa Máxima']
-        const novosJogos = data.apostas.map((nums: number[], i: number) => ({
+        // O backend não retorna a estratégia, então vamos usar uma lista genérica
+        // O backend gera 5 com fixos e 2 aleatórias, então ajustamos as estratégias
+        const estrategias = [
+          'Estratégia 1 (Fixos)', 
+          'Estratégia 2 (Fixos)', 
+          'Estratégia 3 (Fixos)', 
+          'Estratégia 4 (Fixos)', 
+          'Estratégia 5 (Fixos)', 
+          'Estratégia 6 (Aleatória)', 
+          'Estratégia 7 (Aleatória)'
+        ]
+        
+        const novosJogos: Aposta[] = data.apostas.map((nums: number[], i: number) => ({
           id: i + 1,
           numbers: nums,
-          estrategia: estrategias[i] || 'Estratégia'
+          estrategia: estrategias[i] || 'Estratégia Padrão'
         }))
 
         setApostas(novosJogos)
         setFixos(data.fixos)
-        toast.success(isVip ? 'Novos palpites gerados!' : 'Palpites do dia carregados!')
+        toast.success('Palpites gerados com sucesso!')
+      } else if (data.erro) {
+        toast.error(`Erro do Backend: ${data.erro}`)
+      } else {
+        toast.error('Resposta da API inválida.')
       }
-    } catch {
-      toast.error('Erro ao gerar palpites')
+    } catch (e) {
+      console.error(e)
+      toast.error('Erro ao conectar com o servidor de palpites.')
     } finally {
       setIsGenerating(false)
     }
@@ -115,7 +142,7 @@ export function Generator() {
             ) : (
               <>
                 <Wand2 className="w-12 h-12" />
-                {isVip ? 'Gerar Novos Palpites VIP' : 'Ver Palpites do Dia'}
+                Gerar 7 Palpites
               </>
             )}
           </button>
@@ -128,15 +155,15 @@ export function Generator() {
             <div className="flex justify-center gap-8 mb-12">
               <button
                 onClick={() => setViewMode('balls')}
-                className={`px-10 py-4 rounded-xl font-bold text-xl transition-all ${viewMode === 'balls' ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                className={`px-10 py-4 rounded-xl font-bold text-xl transition-all flex items-center gap-2 ${viewMode === 'balls' ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-700'}`}
               >
-                Bolas
+                <List className="w-6 h-6" /> Bolas
               </button>
               <button
                 onClick={() => setViewMode('ticket')}
-                className={`px-10 py-4 rounded-xl font-bold text-xl transition-all ${viewMode === 'ticket' ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-700'}`}
+                className={`px-10 py-4 rounded-xl font-bold text-xl transition-all flex items-center gap-2 ${viewMode === 'ticket' ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-700'}`}
               >
-                Bilhete
+                <Grid3X3 className="w-6 h-6" /> Bilhete
               </button>
             </div>
 
