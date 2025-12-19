@@ -27,16 +27,19 @@ export function Results() {
   const [resultado, setResultado] = useState<Resultado | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const BACKEND_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000'
+  // URL CORRETA NO LOCAL E NO DEPLOY
+  const BACKEND_URL = import.meta.env.PROD 
+    ? 'https://palpiteiro-v2-backend.vercel.app' 
+    : 'http://localhost:5000'
 
   useEffect(() => {
     async function carregar() {
       try {
         setLoading(true)
         const res = await fetch(`${BACKEND_URL}/api/resultados`)
+        if (!res.ok) throw new Error('Falha na resposta')
         const data = await res.json()
-        // debug
-        console.debug('API /api/resultados =>', data)
+        console.log('Dados recebidos:', data) // debug
         setResultado(data)
       } catch (err) {
         console.error('Erro ao buscar resultados:', err)
@@ -46,11 +49,11 @@ export function Results() {
       }
     }
     carregar()
-  }, [BACKEND_URL])
+  }, [])
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-white">
         <Loader2 className="w-16 h-16 animate-spin text-purple-600" />
       </div>
     )
@@ -58,8 +61,12 @@ export function Results() {
 
   if (!resultado) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-2xl text-red-600">Erro ao carregar. Tente novamente.</p>
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="text-center">
+          <AlertCircle className="w-16 h-16 text-red-600 mx-auto mb-4" />
+          <p className="text-2xl text-red-600">Erro ao carregar resultados</p>
+          <p className="text-lg text-gray-600 mt-4">Tente novamente mais tarde</p>
+        </div>
       </div>
     )
   }
